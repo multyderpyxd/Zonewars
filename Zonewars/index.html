@@ -202,6 +202,34 @@
   .zone-2 .zone-title { color: var(--zone3); }
   .zone-status { font-size: 0.7rem; font-family: 'Cinzel', serif; padding: 2px 6px; border-radius: 3px; background: var(--surface2); color: var(--muted); }
 
+  /* Zone modifier badge */
+  .zone-modifier {
+    font-size: 0.68rem;
+    font-family: 'Cinzel', serif;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+    text-align: center;
+    border: 1px solid;
+  }
+  .zone-0 .zone-modifier { color: var(--zone1); border-color: rgba(201,76,76,0.35); background: rgba(201,76,76,0.08); }
+  .zone-1 .zone-modifier { color: var(--zone2); border-color: rgba(76,123,201,0.35); background: rgba(76,123,201,0.08); }
+  .zone-2 .zone-modifier { color: var(--zone3); border-color: rgba(155,76,201,0.35); background: rgba(155,76,201,0.08); }
+  .zone-modifier.hidden { color: var(--muted); border-color: var(--border); background: transparent; font-style: italic; }
+
+  /* ZE score column */
+  .ze-val { font-family: 'Cinzel', serif; font-size: 1rem; color: #c9784c; }
+  .ze-lbl { color: var(--muted); font-size: 0.65rem; }
+
+  /* Modifier reveal animation */
+  @keyframes modReveal {
+    0%   { opacity:0; transform: scale(0.8) translateY(-6px); }
+    60%  { opacity:1; transform: scale(1.06) translateY(0); }
+    100% { opacity:1; transform: scale(1); }
+  }
+  .mod-reveal { animation: modReveal 0.5s ease forwards; }
+
   .zone-players { display: flex; flex-direction: column; gap: 8px; }
   .player-row { display: flex; flex-direction: column; gap: 4px; }
   .player-row-label { font-size: 0.72rem; color: var(--muted); font-family: 'Cinzel', serif; letter-spacing: 1px; }
@@ -298,11 +326,22 @@
   #dragGhost { position: fixed; pointer-events: none; z-index: 9999; opacity: 0.92; transform: rotate(4deg) scale(1.08); transition: none; }
 
   /* Rules */
-  #rulesBtn { position: fixed; bottom: 20px; right: 20px; width: 48px; height: 48px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; z-index: 40; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+  #rulesBtn { position: fixed; bottom: 80px; right: 20px; width: 48px; height: 48px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; z-index: 40; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
   #rulesBtn:hover { border-color: var(--gold); box-shadow: 0 2px 20px rgba(201,168,76,0.3); }
-  #rulesPanel { position: fixed; bottom: 80px; right: 20px; width: 320px; max-height: 75vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--gold); border-radius: 10px; padding: 18px 20px; z-index: 41; box-shadow: 0 8px 32px rgba(0,0,0,0.6); display: none; }
+  #rulesPanel { position: fixed; bottom: 140px; right: 20px; width: 320px; max-height: 75vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--gold); border-radius: 10px; padding: 18px 20px; z-index: 41; box-shadow: 0 8px 32px rgba(0,0,0,0.6); display: none; }
   #rulesPanel h3 { color: var(--gold); font-size: 0.9rem; letter-spacing: 3px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
   #rulesPanel h4 { color: var(--gold2); font-size: 0.75rem; letter-spacing: 2px; margin: 12px 0 6px; }
+  /* Effects button */
+  #efxBtn { position: fixed; bottom: 20px; right: 20px; width: 48px; height: 48px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; z-index: 40; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+  #efxBtn:hover { border-color: var(--gold); box-shadow: 0 2px 20px rgba(201,168,76,0.3); }
+  #efxPanel { position: fixed; bottom: 80px; right: 20px; width: 320px; max-height: 75vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--gold); border-radius: 10px; padding: 18px 20px; z-index: 41; box-shadow: 0 8px 32px rgba(0,0,0,0.6); display: none; }
+  #efxPanel h3 { color: var(--gold); font-size: 0.9rem; letter-spacing: 3px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  #efxPanel h4 { color: var(--gold2); font-size: 0.75rem; letter-spacing: 2px; margin: 12px 0 6px; }
+  .efx-row { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.8rem; }
+  .efx-icon { font-size: 1rem; flex-shrink: 0; width: 20px; text-align: center; }
+  .efx-name { color: var(--gold2); font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 1px; }
+  .efx-desc { color: var(--muted); font-size: 0.75rem; line-height: 1.4; }
+
   .rule-item { font-size: 0.82rem; color: var(--text); line-height: 1.5; margin-bottom: 5px; padding-left: 10px; border-left: 2px solid var(--border); text-align: justify; }
   .hand-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.8rem; }
   .hand-row .hand-name { color: var(--text); }
@@ -388,6 +427,10 @@
 <!-- Floating drag ghost -->
 <div id="dragGhost" style="display:none;"></div>
 
+<!-- Effects info button -->
+<button id="efxBtn" onclick="toggleEfx()" title="Efectos de zona">⚡</button>
+<div id="efxPanel"></div>
+
 <!-- Rules -->
 <button id="rulesBtn" onclick="toggleRules()" title="Reglas del juego">📋</button>
 <div id="rulesPanel">
@@ -424,10 +467,10 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// 🔥 FIREBASE CONFIG — Reemplaza con tus valores de Firebase Console
+// FIREBASE CONFIG
 // ═══════════════════════════════════════════════════════════════════
 const firebaseConfig = {
-  apiKey: "AIzaSyAyhT34lsQGhBa-5mYmKmWSSylDbCQ2SUU",
+  apiKey: import.meta.env.FIREBASE_API_KEY,
   authDomain: "zonewars-e21ef.firebaseapp.com",
   databaseURL: "https://zonewars-e21ef-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "zonewars-e21ef",
@@ -440,13 +483,150 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // ═══════════════════════════════════════════════════════════════════
-// CONSTANTS & CARD LOGIC (sin cambios respecto al original)
+// CONSTANTS & CARD LOGIC
 // ═══════════════════════════════════════════════════════════════════
 const SUITS    = ['♠','♥','♦','♣'];
 const VALUES   = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 const SUIT_COLOR = {'♠':'black','♣':'black','♥':'red','♦':'red'};
 const VAL_MAP  = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14};
 const MAX_SWAPS = 2;
+
+// ═══════════════════════════════════════════════════════════════════
+// ⚙️  ZONE MODIFIERS 
+// ═══════════════════════════════════════════════════════════════════
+
+// Probability (0–1) that a zone gets a modifier at all when it unlocks.
+// 1.0 = always, 0.0 = never, 0.65 = 65% chance
+const MODIFIER_SPAWN_CHANCE = 0.65;
+
+// Individual modifier weights — higher = appears more often.
+// Set to 0 to disable a modifier entirely.
+// Total weight doesn't need to sum to anything specific.
+const MODIFIER_POOL = [
+  // ── NUMBER MODIFIERS ────────────────────────────────────────────
+  { id: 'EVEN_DOUBLE',   weight: 10, icon: '⚡', label: 'Pares x2',
+    desc: 'Las cartas de valor par suman el doble' },
+  { id: 'ODD_DOUBLE',    weight: 10, icon: '🔮', label: 'Impares x2',
+    desc: 'Las cartas de valor impar suman el doble' },
+  { id: 'LUCKY_SEVEN',   weight: 8,  icon: '🎲', label: 'Lucky Seven',
+    desc: 'Cada 7 otorga +10 pts adicionales' },
+  { id: 'ACE_DOMINANCE', weight: 6,  icon: '👑', label: 'Dominio del As',
+    desc: 'Cada As otorga +12 pts adicionales' },
+  { id: 'HIGH_CARD_DBL', weight: 7,  icon: '🏆', label: 'Carta Alta x2',
+    desc: 'La carta más alta de tu mano vale el doble' },
+
+  // ── SUIT MODIFIERS ───────────────────────────────────────────────
+  { id: 'RED_POWER',     weight: 9,  icon: '❤️',  label: 'Poder Rojo',
+    desc: '♥ y ♦ otorgan +3 pts cada una' },
+  { id: 'BLACK_POWER',   weight: 9,  icon: '♠️',  label: 'Poder Negro',
+    desc: '♠ y ♣ otorgan +3 pts cada una' },
+  { id: 'FLUSH_BOOST',   weight: 5,  icon: '🌊', label: 'Flush Boost',
+    desc: 'Si hay color (flush) → +15 pts extra' },
+
+  // ── COMBO MODIFIERS ──────────────────────────────────────────────
+  { id: 'ROYALS_BONUS',  weight: 8,  icon: '🎭', label: 'Corte Real',
+    desc: 'Cada J, Q o K otorga +5 pts adicionales' },
+  { id: 'TRIO_MASTER',   weight: 6,  icon: '🎯', label: 'Maestro del Trío',
+    desc: 'Si hay trío → +15 pts extra sobre el combo' },
+  { id: 'FULL_HOUSE_KING',weight:4,  icon: '🔥', label: 'Full House King',
+    desc: 'Si hay full house → +25 pts extra sobre el combo' },
+  { id: 'COMBO_FEVER',   weight: 5,  icon: '💥', label: 'Combo Fever',
+    desc: 'El valor del combo se multiplica x2' },
+
+  // ── TACTICAL MODIFIERS ──────────────────────────────────────────
+  { id: 'CROWDED',       weight: 7,  icon: '⚔️',  label: 'Zona Saturada',
+    desc: 'Si juegas el máximo de cartas propias (4) → +12 pts' },
+  { id: 'MINIMAL',       weight: 5,  icon: '🎪', label: 'Estrategia Mínima',
+    desc: 'Si juegas 2 o menos cartas propias → +20 pts' },
+];
+
+// Pick a random modifier using weighted probability (no repeats across zones)
+function pickModifier(exclude = []) {
+  const available = MODIFIER_POOL.filter(m => m.weight > 0 && !exclude.includes(m.id));
+  if (!available.length) return null;
+  const totalWeight = available.reduce((s, m) => s + m.weight, 0);
+  let r = Math.random() * totalWeight;
+  for (const m of available) {
+    r -= m.weight;
+    if (r <= 0) return m.id;
+  }
+  return available[available.length - 1].id;
+}
+
+// Calculate the ZE (Zone Effect) score for a set of cards given a modifier
+function calcZEScore(modifierId, communityCards, extraCards) {
+  if (!modifierId) return 0;
+  const all = [...communityCards, ...extraCards];
+  if (!all.length) return 0;
+  let ze = 0;
+
+  switch (modifierId) {
+    case 'EVEN_DOUBLE':
+      // Even-value cards add their value again (effectively doubling their sum contribution)
+      all.forEach(c => { if (cardNum(c) % 2 === 0) ze += cardNum(c); });
+      break;
+    case 'ODD_DOUBLE':
+      all.forEach(c => { if (cardNum(c) % 2 !== 0) ze += cardNum(c); });
+      break;
+    case 'LUCKY_SEVEN':
+      all.forEach(c => { if (cardNum(c) === 7) ze += 10; });
+      break;
+    case 'ACE_DOMINANCE':
+      all.forEach(c => { if (c.val === 'A') ze += 12; });
+      break;
+    case 'HIGH_CARD_DBL': {
+      const maxVal = Math.max(...all.map(cardNum));
+      ze += maxVal; // adds maxVal once more (doubling its contribution)
+      break;
+    }
+    case 'RED_POWER':
+      all.forEach(c => { if (c.suit === '♥' || c.suit === '♦') ze += 3; });
+      break;
+    case 'BLACK_POWER':
+      all.forEach(c => { if (c.suit === '♠' || c.suit === '♣') ze += 3; });
+      break;
+    case 'FLUSH_BOOST': {
+      const suits = all.map(c => c.suit);
+      if (all.length >= 4 && suits.every(s => s === suits[0])) ze += 15;
+      break;
+    }
+    case 'ROYALS_BONUS':
+      all.forEach(c => { if (['J','Q','K'].includes(c.val)) ze += 5; });
+      break;
+    case 'TRIO_MASTER': {
+      const combo = bestCombo(all);
+      if (combo.name === 'Trío' || combo.name === 'Full House') ze += 15;
+      break;
+    }
+    case 'FULL_HOUSE_KING': {
+      const combo = bestCombo(all);
+      if (combo.name === 'Full House') ze += 25;
+      break;
+    }
+    case 'COMBO_FEVER': {
+      const combo = bestCombo(all);
+      ze += combo.pts; // adds combo pts again (x2 total)
+      break;
+    }
+    case 'CROWDED':
+      if (extraCards.length >= 4) ze += 12;
+      break;
+    case 'MINIMAL':
+      if (extraCards.length <= 2 && extraCards.length >= 1) ze += 20;
+      break;
+  }
+  return ze;
+}
+
+// Total score including ZE
+function totalScoreWithZE(communityCards, extraCards, modifierId) {
+  const base = totalScore(communityCards, extraCards);
+  const ze   = calcZEScore(modifierId, communityCards, extraCards);
+  return { base, ze, total: base + ze };
+}
+
+// Helper to get modifier definition by id
+function getModDef(id) { return MODIFIER_POOL.find(m => m.id === id) || null; }
 const TOTAL_ROUNDS = 4;
 const ZONE_CAPACITY = 4;
 
@@ -505,6 +685,8 @@ let newlyDealtCount = 0; // how many cards at the END of hand are "new" (animate
 let dealAnimUntil = 0;   // timestamp — render adds deal classes while Date.now() < dealAnimUntil
 let revealingEnemyCards = false;
 let revealedEnemyCardIds = new Set();
+let revealedModifiers  = new Set(); // zones whose modifier badge animation has already played
+let animatingModifiers = new Set(); // zones currently mid-animation (brief window)
 let md = null, dropTarget = null;
 
 // ═══════════════════════════════════════════════════════════════════
@@ -585,7 +767,7 @@ function leaveRoom() {
     roomRef = null;
   }
   roomId = null; myRole = null; gameState = null;
-  thisRoundPlaced = []; revealedEnemyCardIds = new Set(); newlyDealtCount = 0; dealAnimUntil = 0;
+  thisRoundPlaced = []; revealedEnemyCardIds = new Set(); newlyDealtCount = 0; dealAnimUntil = 0; revealedModifiers = new Set(); animatingModifiers = new Set();
   document.getElementById('gameScreen').style.display = 'none';
   document.getElementById('lobbyScreen').style.display = 'flex';
   document.getElementById('lobbyCreate').style.display = 'flex';
@@ -615,7 +797,17 @@ function buildInitialState() {
     communityCards: [draw(), draw()],
     hostCards: [],
     guestCards: [],
+    modifier: null,      // assigned when zone unlocks (null = no effect)
+    modifierRevealed: false,
   }));
+
+  // Zone 0 unlocks immediately on round 1 — assign its modifier now
+  const usedMods = [];
+  if (Math.random() < MODIFIER_SPAWN_CHANCE) {
+    zones[0].modifier = pickModifier(usedMods);
+    if (zones[0].modifier) usedMods.push(zones[0].modifier);
+  }
+  zones[0].modifierRevealed = true;
 
   const hostHand  = Array.from({length:5}, draw);
   const guestHand = Array.from({length:5}, draw);
@@ -655,6 +847,7 @@ function startOnlineGame() {
   // Listen to state changes
   roomRef.child('state').on('value', snap => {
     const prev = gameState;
+    const prevState = gameState;
     gameState = snap.val();
     if (!gameState) {
       // Room was deleted (host disconnected)
@@ -702,6 +895,27 @@ function onStateChange(prev, gs) {
     return;
   }
   // If host disconnects the whole room disappears — guest gets null state
+
+  // Detect newly revealed zone modifiers (works for both host and guest)
+  if (prev) {
+    for (let zi = 0; zi < 3; zi++) {
+      const wasRevealed = prev.zones && prev.zones[zi] && prev.zones[zi].modifierRevealed;
+      const nowRevealed = gs.zones && gs.zones[zi] && gs.zones[zi].modifierRevealed;
+      if (!wasRevealed && nowRevealed) {
+        // Zone zi just got its modifier revealed — trigger animation after banner
+        // Use a short delay so the banner plays first
+        setTimeout(() => triggerModifierAnimation(zi), 1800);
+      }
+    }
+  } else {
+    // First snapshot (prev=null) — trigger animation for any already-revealed zones
+    for (let zi = 0; zi < 3; zi++) {
+      if (gs.zones && gs.zones[zi] && gs.zones[zi].modifierRevealed) {
+        setTimeout(() => triggerModifierAnimation(zi), 400);
+      }
+    }
+  }
+
   const wasRevealing = prev && prev.phase === 'revealing';
   const nowRevealing = gs.phase === 'revealing';
 
@@ -731,7 +945,14 @@ function onStateChange(prev, gs) {
     revealedEnemyCardIds = new Set();
     newlyDealtCount = 0;
     dealAnimUntil = 0;
+    revealedModifiers = new Set(); animatingModifiers = new Set();
     render();
+    // Re-trigger zone 0 animation for rematch
+    for (let zi = 0; zi < 3; zi++) {
+      if (gameState && gameState.zones && gameState.zones[zi] && gameState.zones[zi].modifierRevealed) {
+        setTimeout(() => triggerModifierAnimation(zi), 400 + zi * 200);
+      }
+    }
   } else {
     // Reset local placed tracking on new round
     if (prev && prev.round !== gs.round) {
@@ -902,6 +1123,19 @@ async function advanceRoundOrEnd(gs) {
       for (let i=0; i<cardsToPlay; i++) { if(deck.length) guestHand.push(deck.shift()); }
     }
 
+    // Assign modifier to the newly unlocked zone (zone index = nextRound - 1, max zone 2)
+    const newZoneIdx = nextRound - 1; // round 2 unlocks zone 1, round 3 unlocks zone 2
+    const zoneUpdates = {};
+    if (newZoneIdx <= 2 && nextRound <= 3) {
+      const usedMods = gs.zones.map(z => z.modifier).filter(Boolean);
+      let newMod = null;
+      if (Math.random() < MODIFIER_SPAWN_CHANCE) {
+        newMod = pickModifier(usedMods);
+      }
+      zoneUpdates[`zones/${newZoneIdx}/modifier`] = newMod;
+      zoneUpdates[`zones/${newZoneIdx}/modifierRevealed`] = true;
+    }
+
     await roomRef.child('state').update({
       round: nextRound,
       phase: 'playing',
@@ -917,6 +1151,7 @@ async function advanceRoundOrEnd(gs) {
       hostHand,
       guestHand,
       deck,
+      ...zoneUpdates,
     });
   }
 }
@@ -926,12 +1161,13 @@ function computeEndGame(gs) {
   const breakdown = [];
   for (let i=0;i<3;i++) {
     const z = gs.zones[i];
-    const hS = totalScore(z.communityCards, z.hostCards||[]);
-    const gS = totalScore(z.communityCards, z.guestCards||[]);
+    const hR = totalScoreWithZE(z.communityCards, z.hostCards||[], z.modifier);
+    const gR = totalScoreWithZE(z.communityCards, z.guestCards||[], z.modifier);
+    const hS = hR.total, gS = gR.total;
     hostTotal+=hS; guestTotal+=gS;
-    if (hS>gS) { hostWins++; breakdown.push({zone:i,winner:'host',hS,gS}); }
-    else if (gS>hS) { guestWins++; breakdown.push({zone:i,winner:'guest',hS,gS}); }
-    else { breakdown.push({zone:i,winner:'tie',hS,gS}); }
+    if (hS>gS) { hostWins++; breakdown.push({zone:i,winner:'host',hS,gS,modifier:z.modifier}); }
+    else if (gS>hS) { guestWins++; breakdown.push({zone:i,winner:'guest',hS,gS,modifier:z.modifier}); }
+    else { breakdown.push({zone:i,winner:'tie',hS,gS,modifier:z.modifier}); }
   }
   let winner='tie';
   if (hostWins>=2) winner='host';
@@ -1016,10 +1252,15 @@ function renderZones() {
     const locked = i >= Math.min(gs.round, 3);
     const mine = myCards(i);
     const opp  = oppCards(i);
-    const pScore = totalScore(z.communityCards, mine);
-    const eScore = totalScore(z.communityCards, opp);
+    const pResult = totalScoreWithZE(z.communityCards, mine, z.modifier);
+    const eResult = totalScoreWithZE(z.communityCards, opp,  z.modifier);
+    const pScore = pResult.total;
+    const eScore = eResult.total;
     const pCombo = bestCombo([...z.communityCards,...mine]);
     const eCombo = bestCombo([...z.communityCards,...opp]);
+    const modDef  = z.modifier ? getModDef(z.modifier) : null;
+    // Animation is managed in onStateChange/startOnlineGame — renderZones just reads the flag
+    const modIsNew = animatingModifiers.has(i);
 
     const commHtml = locked
       ? `<div class="playing-card face-down"></div><div class="playing-card face-down"></div>`
@@ -1061,11 +1302,25 @@ function renderZones() {
         <div class="card-val">${c.val}</div><div class="card-suit">${c.suit}</div></div>`;
     }).join('');
 
+    // Build modifier badge HTML
+    let modHtml = '';
+    if (!locked) {
+      if (modDef) {
+        const animClass = modIsNew ? 'mod-reveal' : '';
+        modHtml = `<div class="zone-modifier ${animClass}">${modDef.icon} ${modDef.label}</div>`;
+      } else if (z.modifierRevealed) {
+        modHtml = `<div class="zone-modifier hidden">Sin efecto</div>`;
+      } else {
+        modHtml = `<div class="zone-modifier hidden">⏳ Efecto oculto</div>`;
+      }
+    }
+
     html += `<div class="zone zone-${i} ${locked?'locked':''}" id="zone-${i}">
       <div class="zone-header">
         <span class="zone-title">${zoneNames[i]}</span>
         <span class="zone-status">${locked?'BLOCKED':`RONDA ${i+1}`}</span>
       </div>
+      ${modHtml}
       <div class="zone-players">
         <div class="player-row">
           <div class="player-row-label">RIVAL (${opp.length}/${ZONE_CAPACITY})</div>
@@ -1084,12 +1339,17 @@ function renderZones() {
         </div>
       </div>`;
     if (!locked) {
-      const pS2 = pointSum([...z.communityCards,...mine]);
       const pC2 = bestCombo([...z.communityCards,...mine]);
+      const pS2 = pointSum([...z.communityCards,...mine]);
+      const pZE2 = pResult.ze;
+      const zeCol = modDef ? `
+        <div class="score-item"><div class="val" style="font-size:.85rem;color:var(--muted)">+</div></div>
+        <div class="score-item"><div class="ze-val" style="font-size:.85rem">${pZE2}</div><div class="ze-lbl">ZE</div></div>` : '';
       html += `<div class="zone-scores">
         <div class="score-item"><div class="val" style="font-size:.85rem">${pC2.pts}</div><div class="lbl">COMBO</div></div>
         <div class="score-item"><div class="val" style="font-size:.85rem;color:var(--muted)">+</div></div>
         <div class="score-item"><div class="val" style="font-size:.85rem">${pS2}</div><div class="lbl">SUMA</div></div>
+        ${zeCol}
         <div class="score-item"><div class="val" style="font-size:.85rem;color:var(--muted)">=</div></div>
         <div class="score-item"><div class="val">${pScore}</div><div class="lbl">TOTAL</div></div>
       </div>`;
@@ -1243,6 +1503,20 @@ function showEndGame(gs) {
 // ═══════════════════════════════════════════════════════════════════
 // REMATCH
 // ═══════════════════════════════════════════════════════════════════
+// ── MODIFIER ANIMATION TRIGGER ──────────────────────────────────────────────
+// Call this when a zone's modifier becomes visible for the first time.
+// Safe to call multiple times — no-ops if already revealed.
+function triggerModifierAnimation(zoneIdx) {
+  if (revealedModifiers.has(zoneIdx) || animatingModifiers.has(zoneIdx)) return;
+  animatingModifiers.add(zoneIdx);
+  render(); // paint with animation class
+  setTimeout(() => {
+    animatingModifiers.delete(zoneIdx);
+    revealedModifiers.add(zoneIdx);
+    // No re-render needed — class just stays off from now on, next render will omit it
+  }, 700);
+}
+
 async function requestRematch() {
   document.getElementById('rematchBtn').disabled = true;
   document.getElementById('rematchStatus').textContent = 'Esperando al rival...';
@@ -1276,12 +1550,52 @@ let _rulesOpen=false;
 function toggleRules() {
   _rulesOpen=!_rulesOpen;
   document.getElementById('rulesPanel').style.display=_rulesOpen?'block':'none';
+  if (_rulesOpen) { _efxOpen=false; document.getElementById('efxPanel').style.display='none'; }
 }
 document.addEventListener('mousedown',e=>{
   if(_rulesOpen&&!document.getElementById('rulesPanel').contains(e.target)&&!document.getElementById('rulesBtn').contains(e.target)){
     _rulesOpen=false; document.getElementById('rulesPanel').style.display='none';
   }
+  if(_efxOpen&&!document.getElementById('efxPanel').contains(e.target)&&!document.getElementById('efxBtn').contains(e.target)){
+    _efxOpen=false; document.getElementById('efxPanel').style.display='none';
+  }
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// EFFECTS PANEL
+// ═══════════════════════════════════════════════════════════════════
+let _efxOpen=false;
+function toggleEfx() {
+  _efxOpen=!_efxOpen;
+  if (_efxOpen) {
+    _rulesOpen=false; document.getElementById('rulesPanel').style.display='none';
+    // Build panel content from MODIFIER_POOL
+    const categories = [
+      { label: 'NÚMERO', ids: ['EVEN_DOUBLE','ODD_DOUBLE','LUCKY_SEVEN','ACE_DOMINANCE','HIGH_CARD_DBL'] },
+      { label: 'PALO',   ids: ['RED_POWER','BLACK_POWER','FLUSH_BOOST'] },
+      { label: 'COMBO',  ids: ['ROYALS_BONUS','TRIO_MASTER','FULL_HOUSE_KING','COMBO_FEVER'] },
+      { label: 'TÁCTICA',ids: ['CROWDED','MINIMAL'] },
+    ];
+    let html = '<h3>⚡ EFECTOS DE ZONA</h3>';
+    html += '<p style="font-size:0.75rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">Cada zona puede tener un efecto aleatorio que añade un <b style="color:#c9784c">ZE Score</b> al total. No se repiten efectos entre zonas.</p>';
+    for (const cat of categories) {
+      html += `<h4>${cat.label}</h4>`;
+      for (const id of cat.ids) {
+        const m = getModDef(id);
+        if (!m) continue;
+        html += `<div class="efx-row">
+          <div class="efx-icon">${m.icon}</div>
+          <div>
+            <div class="efx-name">${m.label}</div>
+            <div class="efx-desc">${m.desc}</div>
+          </div>
+        </div>`;
+      }
+    }
+    document.getElementById('efxPanel').innerHTML = html;
+  }
+  document.getElementById('efxPanel').style.display=_efxOpen?'block':'none';
+}
 
 </script>
 </body>
