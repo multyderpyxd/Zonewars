@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zone Wars - Multijugador</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --bg: #0d0d12;
+    --surface: #13131c;
+    --surface2: #1a1a28;
+    --border: #2a2a40;
+    --gold: #c9a84c;
+    --gold2: #e8c96a;
+    --red: #c94c4c;
+    --blue: #4c7bc9;
+    --green: #4cb87a;
+    --text: #e8e0d0;
+    --muted: #7a7a9a;
+    --zone1: #c94c4c;
+    --zone2: #4c7bc9;
+    --zone3: #9b4cc9;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Crimson Text', serif;
+    font-size: 16px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .label { font-family: 'Cinzel', serif; }
+
+  /* ── LOBBY ── */
+  #lobbyScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+    gap: 16px;
+  }
+
+  #lobbyScreen h1 {
+    font-size: 2.2rem;
+    color: var(--gold);
+    letter-spacing: 6px;
+    margin-bottom: 8px;
+  }
+
+  .lobby-box {
+    background: var(--surface);
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    padding: 28px 36px;
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    text-align: center;
+  }
+
+  .lobby-box h2 {
+    color: var(--gold2);
+    font-size: 1rem;
+    letter-spacing: 3px;
+  }
+
+  .lobby-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    text-align: center;
+    text-transform: uppercase;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .lobby-input:focus { border-color: var(--gold); }
+
+  .lobby-divider {
+    color: var(--muted);
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+  }
+
+  .room-code-display {
+    font-family: 'Cinzel', serif;
+    font-size: 2rem;
+    color: var(--gold);
+    letter-spacing: 8px;
+    background: var(--surface2);
+    border: 1px dashed var(--gold);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    user-select: all;
+  }
+  .room-code-display:hover { background: rgba(201,168,76,0.08); }
+
+  .waiting-text {
+    color: var(--muted);
+    font-size: 0.85rem;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── HEADER ── */
+  header {
+    text-align: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  header h1 { font-size: 1.4rem; color: var(--gold); letter-spacing: 3px; }
+
+  .game-info {
+    display: flex;
+    gap: 20px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: 'Cinzel', serif;
+  }
+  .game-info span { color: var(--gold2); }
+
+  .turn-badge {
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    border: 1px solid;
+  }
+  .turn-badge.my-turn { color: var(--green); border-color: var(--green); background: rgba(76,184,122,0.1); }
+  .turn-badge.their-turn { color: var(--muted); border-color: var(--border); }
+
+  /* ── MAIN ── */
+  main { max-width: 1100px; margin: 0 auto; padding: 14px; }
+
+  .status-bar {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    color: var(--gold2);
+    text-align: center;
+    margin-bottom: 12px;
+    font-family: 'Cinzel', serif;
+    letter-spacing: 1px;
+  }
+
+  /* ── ZONES ── */
+  .zones-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .zone {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    position: relative;
+    transition: border-color 0.3s;
+  }
+  .zone.zone-0 { border-top: 3px solid var(--zone1); }
+  .zone.zone-1 { border-top: 3px solid var(--zone2); }
+  .zone.zone-2 { border-top: 3px solid var(--zone3); }
+  .zone.locked { opacity: 0.5; filter: grayscale(0.8); }
+
+  .zone-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .zone-title { font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 2px; }
+  .zone-0 .zone-title { color: var(--zone1); }
+  .zone-1 .zone-title { color: var(--zone2); }
+  .zone-2 .zone-title { color: var(--zone3); }
+  .zone-status { font-size: 0.7rem; font-family: 'Cinzel', serif; padding: 2px 6px; border-radius: 3px; background: var(--surface2); color: var(--muted); }
+
+  .zone-players { display: flex; flex-direction: column; gap: 8px; }
+  .player-row { display: flex; flex-direction: column; gap: 4px; }
+  .player-row-label { font-size: 0.72rem; color: var(--muted); font-family: 'Cinzel', serif; letter-spacing: 1px; }
+
+  .cards-area {
+    display: flex; gap: 4px; min-height: 64px;
+    background: var(--surface2); border-radius: 4px; padding: 4px;
+    flex-wrap: wrap; align-items: center;
+  }
+  .cards-area.drop-target { background: rgba(201,168,76,0.12); outline: 2px dashed var(--gold); outline-offset: -2px; }
+
+  .playing-card {
+    width: 40px; height: 56px; border-radius: 4px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 700; border: 1px solid;
+    cursor: pointer; transition: all 0.15s; position: relative;
+    background: #f5f0e8; user-select: none;
+  }
+  .playing-card.face-down { background: linear-gradient(135deg, #1e2a4a 25%, #2a3a6a 50%, #1e2a4a 75%); border-color: #3a4a7a; cursor: default; }
+  .playing-card.face-down::after { content: '🂠'; font-size: 1.4rem; color: rgba(255,255,255,0.3); }
+  .playing-card.red { color: #c41a1a; border-color: #daa; }
+  .playing-card.black { color: #111; border-color: #aaa; }
+  .playing-card.retractable { outline: 1px dashed rgba(201,168,76,0.5); }
+  .playing-card.retractable:hover { outline-color: var(--gold); }
+  .playing-card.dragging-ghost { opacity: 0.3; cursor: grabbing; }
+  .card-suit { font-size: 0.9rem; line-height: 1; }
+  .card-val { font-size: 0.75rem; line-height: 1; font-weight: 900; }
+  .combo-label { font-size: 0.65rem; color: var(--muted); text-align: center; margin-top: 2px; font-style: italic; }
+
+  .zone-scores { display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.72rem; padding-top: 8px; border-top: 1px solid var(--border); }
+  .score-item { text-align: center; }
+  .score-item .val { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--gold2); }
+  .score-item .lbl { color: var(--muted); font-size: 0.65rem; }
+
+  /* Card flip animation */
+  .card-flip-wrapper { perspective: 400px; }
+  .card-flip-inner { position: relative; width: 40px; height: 56px; transform-style: preserve-3d; }
+  .card-flip-inner.delay-1 { animation: flipCard 0.5s 0.1s ease forwards; opacity:0; animation-fill-mode: forwards; }
+  .card-flip-inner.delay-2 { animation: flipCard 0.5s 0.25s ease forwards; opacity:0; animation-fill-mode: forwards; }
+  .card-flip-inner.delay-3 { animation: flipCard 0.5s 0.4s ease forwards; opacity:0; animation-fill-mode: forwards; }
+  .card-flip-inner.delay-4 { animation: flipCard 0.5s 0.55s ease forwards; opacity:0; animation-fill-mode: forwards; }
+  @keyframes flipCard { 0% { transform: rotateY(90deg); opacity:1; } 100% { transform: rotateY(0deg); opacity:1; } }
+
+  /* Round banner */
+  #roundBanner { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 50; }
+  .round-banner-text { font-family: 'Cinzel', serif; font-size: 2.8rem; font-weight: 900; color: var(--gold); letter-spacing: 8px; text-transform: uppercase; text-shadow: 0 0 40px rgba(201,168,76,0.8), 0 2px 0 #000; animation: bannerAnim 1.6s ease forwards; opacity: 0; }
+  @keyframes bannerAnim { 0%{opacity:0;transform:scale(0.7)} 20%{opacity:1;transform:scale(1.05)} 60%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(1.1)} }
+
+  /* Hand */
+  .hand-section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+  .hand-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .hand-title { font-family: 'Cinzel', serif; font-size: 0.9rem; color: var(--gold); letter-spacing: 2px; }
+  .hand-cards { display: flex; gap: 6px; flex-wrap: wrap; min-height: 56px; }
+  .hand-cards.drop-target-hand { background: rgba(76,184,122,0.08); outline: 2px dashed var(--green); outline-offset: -2px; border-radius: 4px; }
+  .hand-playing-card { width: 44px; height: 62px; font-size: 0.9rem; }
+  .draggable-card { cursor: grab; }
+  .draggable-card:hover { transform: translateY(-3px); }
+
+  /* New card deal animation */
+  @keyframes dealCard {
+    0%   { opacity: 0; transform: translateY(-28px) scale(0.85); }
+    60%  { opacity: 1; transform: translateY(4px) scale(1.04); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .card-dealt { animation: dealCard 0.38s ease forwards; }
+  .card-dealt-2 { animation: dealCard 0.38s 0.15s ease both; opacity: 0; }
+
+  /* Controls */
+  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn { font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 1px; padding: 8px 16px; border-radius: 4px; border: 1px solid; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
+  .btn-gold { width: 176px; height: 60px; background: var(--gold); border-color: var(--gold2); color: #1a1208; }
+  .btn-gold:hover { background: var(--gold2); }
+  .btn-outline { background: transparent; border-color: var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .cards-played-info { margin-right: 5px; font-size: 0.8rem; color: var(--muted); padding: 3px 10px; background: var(--surface2); border-radius: 4px; }
+
+  /* Discard */
+  .discard-area { width: 176px; min-height: 68px; border: 2px dashed var(--border); border-radius: 6px; background: var(--surface2); display: flex; gap: 4px; flex-wrap: wrap; align-items: center; justify-content: center; padding: 4px; transition: border-color 0.2s, background 0.2s; }
+  .discard-area.drop-target-discard { border-color: var(--gold); background: rgba(201,168,76,0.1); }
+  .discard-area.full { border-color: var(--muted); opacity: 0.5; }
+
+  /* Overlay */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .overlay-box { background: var(--surface); border: 1px solid var(--gold); border-radius: 12px; padding: 32px 40px; text-align: center; max-width: 420px; }
+  .overlay-box h2 { color: var(--gold); font-size: 1.8rem; margin-bottom: 12px; letter-spacing: 3px; }
+  .overlay-box p { color: var(--muted); margin-bottom: 20px; font-size: 1.1rem; line-height: 1.6; }
+  .scores-breakdown { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; text-align: center; }
+  .score-zone-box { background: var(--surface2); border-radius: 6px; padding: 8px; font-size: 0.8rem; }
+  .score-zone-box .zone-name { font-family: 'Cinzel', serif; font-size: 0.7rem; margin-bottom: 4px; }
+  .score-zone-box .pts { font-size: 1.2rem; color: var(--gold2); font-family: 'Cinzel', serif; }
+
+  /* Floating drag ghost */
+  #dragGhost { position: fixed; pointer-events: none; z-index: 9999; opacity: 0.92; transform: rotate(4deg) scale(1.08); transition: none; }
+
+  /* Rules */
+  #rulesBtn { position: fixed; bottom: 20px; right: 20px; width: 48px; height: 48px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; z-index: 40; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+  #rulesBtn:hover { border-color: var(--gold); box-shadow: 0 2px 20px rgba(201,168,76,0.3); }
+  #rulesPanel { position: fixed; bottom: 80px; right: 20px; width: 320px; max-height: 75vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--gold); border-radius: 10px; padding: 18px 20px; z-index: 41; box-shadow: 0 8px 32px rgba(0,0,0,0.6); display: none; }
+  #rulesPanel h3 { color: var(--gold); font-size: 0.9rem; letter-spacing: 3px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  #rulesPanel h4 { color: var(--gold2); font-size: 0.75rem; letter-spacing: 2px; margin: 12px 0 6px; }
+  .rule-item { font-size: 0.82rem; color: var(--text); line-height: 1.5; margin-bottom: 5px; padding-left: 10px; border-left: 2px solid var(--border); text-align: justify; }
+  .hand-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.8rem; }
+  .hand-row .hand-name { color: var(--text); }
+  .hand-row .hand-pts { color: var(--gold2); font-family: 'Cinzel', serif; font-size: 0.75rem; }
+</style>
+</head>
+<body>
+
+<!-- ── LOBBY ─────────────────────────────────────────────────────── -->
+<div id="lobbyScreen">
+  <h1>⚔ ZONE WARS ⚔</h1>
+
+  <div class="lobby-box" id="lobbyCreate">
+    <h2>NUEVA PARTIDA</h2>
+    <button class="btn btn-gold" style="width:100%;height:48px;" onclick="createRoom()">Crear Sala</button>
+    <div class="lobby-divider">— o —</div>
+    <h2>UNIRSE</h2>
+    <input class="lobby-input" id="joinCodeInput" maxlength="6" placeholder="CÓDIGO" />
+    <button class="btn btn-outline" style="width:100%;" onclick="joinRoom()">Entrar a la Sala</button>
+  </div>
+
+  <div class="lobby-box" id="lobbyWaiting" style="display:none;">
+    <h2>CÓDIGO DE SALA</h2>
+    <div class="room-code-display" id="roomCodeDisplay" onclick="copyCode()" title="Click para copiar">------</div>
+    <p style="font-size:0.75rem; color:var(--muted);">Comparte este código con tu rival</p>
+    <div class="waiting-text" id="waitingText">Esperando al rival...</div>
+    <button class="btn btn-outline" style="width:100%; margin-top:4px;" onclick="leaveRoom()">Cancelar</button>
+  </div>
+</div>
+
+<!-- ── GAME ──────────────────────────────────────────────────────── -->
+<div id="gameScreen" style="display:none;">
+
+<header>
+  <h1>⚔ ZONE WARS ⚔</h1>
+  <div class="game-info">
+    Ronda: <span id="roundDisplay">1</span> &nbsp;|&nbsp; Fase: <span id="phaseDisplay">—</span>
+  </div>
+  <div class="turn-badge" id="turnBadge">—</div>
+</header>
+
+<main>
+  <div class="status-bar" id="statusBar">Cargando partida...</div>
+  <div class="zones-row" id="zonesRow"></div>
+
+  <div class="hand-section">
+    <div class="hand-header">
+      <span class="hand-title">Tu Mano</span>
+      <div class="controls">
+        <span class="cards-played-info" id="cardsPlayedInfo">0 / 2 cartas jugadas</span>
+        <button class="btn btn-gold" id="endRoundBtn" onclick="endRound()" disabled>Terminar Ronda</button>
+      </div>
+    </div>
+    <div style="display:flex; gap:12px; align-items:flex-start;">
+      <div class="hand-cards" id="handCards" style="flex:1;"></div>
+      <div id="discardZone" style="flex-shrink:0;">
+        <div class="player-row-label" style="margin-bottom:4px; text-align:center;">DESCARTE <span id="swapCountLabel">(2 restantes)</span></div>
+        <div class="discard-area" id="discardArea" data-drop-discard="1"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- End Game Overlay -->
+<div class="overlay" id="endOverlay" style="display:none;">
+  <div class="overlay-box">
+    <h2 id="endTitle">—</h2>
+    <div class="scores-breakdown" id="endScores"></div>
+    <p id="endMsg"></p>
+    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+      <button class="btn btn-gold" id="rematchBtn" onclick="requestRematch()">Revancha</button>
+      <button class="btn btn-outline" onclick="leaveRoom()">Volver al Lobby</button>
+    </div>
+    <div id="rematchStatus" style="margin-top:12px; font-size:0.8rem; color:var(--muted); font-family:'Cinzel',serif; letter-spacing:1px; min-height:1.2em;"></div>
+  </div>
+</div>
+
+<!-- Round Banner -->
+<div id="roundBanner" style="display:none;">
+  <div class="round-banner-text" id="roundBannerText"></div>
+</div>
+
+<!-- Floating drag ghost -->
+<div id="dragGhost" style="display:none;"></div>
+
+<!-- Rules -->
+<button id="rulesBtn" onclick="toggleRules()" title="Reglas del juego">📋</button>
+<div id="rulesPanel">
+  <h3>📋 REGLAS DEL JUEGO</h3>
+  <h4>ESTRUCTURA</h4>
+  <div class="rule-item">La partida tiene <b>4 rondas</b>. Cada ronda desbloquea una nueva zona (rondas 1-3). La ronda 4 es la ronda final con todas las zonas activas.</div>
+  <div class="rule-item">Cada zona tiene <b>2 cartas comunitarias</b> que forman parte de la mano de ambos jugadores.</div>
+  <div class="rule-item">Cada jugador puede añadir hasta <b>4 cartas propias</b> a cada zona.</div>
+  <h4>TURNO</h4>
+  <div class="rule-item">Rondas 1-3: juega <b>2 cartas</b> por ronda. Ronda final: juega <b>3 cartas</b>.</div>
+  <div class="rule-item">Las cartas del rival se revelan <b>al terminar la ronda</b>.</div>
+  <div class="rule-item">Las cartas jugadas en la <b>ronda actual</b> se pueden retirar arrastrándolas de vuelta a la mano.</div>
+  <div class="rule-item">Al final de cada ronda (excepto la 4ª) recibes <b>2 cartas nuevas</b>.</div>
+  <h4>DESCARTE</h4>
+  <div class="rule-item">Arrastra una carta al área de descarte (↩) para cambiarla. <b>Máximo 2 cambios por ronda.</b></div>
+  <h4>VICTORIA</h4>
+  <div class="rule-item">Gana quien consiga <b>2 o más zonas</b>. En empate, gana quien tenga más <b>puntos totales</b>.</div>
+  <h4>MANOS (COMBO)</h4>
+  <div class="hand-row"><span class="hand-name">Straight Flush</span><span class="hand-pts">120 pts</span></div>
+  <div class="hand-row"><span class="hand-name">Four Knights (póker)</span><span class="hand-pts">80 pts</span></div>
+  <div class="hand-row"><span class="hand-name">Straight (escalera)</span><span class="hand-pts">60 pts</span></div>
+  <div class="hand-row"><span class="hand-name">Flush (color)</span><span class="hand-pts">60 pts</span></div>
+  <div class="hand-row"><span class="hand-name">Full House</span><span class="hand-pts">55 pts</span></div>
+  <div class="hand-row"><span class="hand-name">Doble Pareja</span><span class="hand-pts">30 pts</span></div>
+  <div class="hand-row"><span class="hand-name">Trío</span><span class="hand-pts">30 pts</span></div>
+  <div class="hand-row"><span class="hand-name">Pareja</span><span class="hand-pts">15 pts</span></div>
+  <div class="hand-row"><span class="hand-name">Carta Alta</span><span class="hand-pts hand-pts-sum">valor de la carta</span></div>
+  <h4>VALORES</h4>
+  <div class="rule-item">2=2 ... 10=10, J=11, Q=12, K=13, A=14</div>
+</div>
+
+</div><!-- /gameScreen -->
+
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// 🔥 FIREBASE CONFIG — Reemplaza con tus valores de Firebase Console
+// ═══════════════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyAyhT34lsQGhBa-5mYmKmWSSylDbCQ2SUU",
+  authDomain: "zonewars-e21ef.firebaseapp.com",
+  databaseURL: "https://zonewars-e21ef-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "zonewars-e21ef",
+  storageBucket: "zonewars-e21ef.firebasestorage.app",
+  messagingSenderId: "564682702849",
+  appId: "1:564682702849:web:6bac85db7c75ccc278c000"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ═══════════════════════════════════════════════════════════════════
+// CONSTANTS & CARD LOGIC (sin cambios respecto al original)
+// ═══════════════════════════════════════════════════════════════════
+const SUITS    = ['♠','♥','♦','♣'];
+const VALUES   = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const SUIT_COLOR = {'♠':'black','♣':'black','♥':'red','♦':'red'};
+const VAL_MAP  = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14};
+const MAX_SWAPS = 2;
+const TOTAL_ROUNDS = 4;
+const ZONE_CAPACITY = 4;
+
+function makeDeck() {
+  const d = [];
+  for (const s of SUITS) for (const v of VALUES) d.push({suit:s,val:v});
+  return d;
+}
+function shuffle(arr) {
+  const rand = n => { const b = new Uint32Array(1); crypto.getRandomValues(b); return b[0]%n; };
+  for (let p=0;p<3;p++) for (let i=arr.length-1;i>0;i--) { const j=rand(i+1); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  return arr;
+}
+function cardNum(c) { return VAL_MAP[c.val]; }
+function evalHand(cards) {
+  if (!cards.length) return {name:'—',pts:0};
+  const vals = cards.map(cardNum).sort((a,b)=>a-b);
+  const suits = cards.map(c=>c.suit);
+  const valsSet = {}; vals.forEach(v=>valsSet[v]=(valsSet[v]||0)+1);
+  const counts = Object.values(valsSet).sort((a,b)=>b-a);
+  const n = cards.length;
+  const isFlush = n>=4 && suits.every(s=>s===suits[0]);
+  const isStraight = n>=4&&(()=>{const u=[...new Set(vals)].sort((a,b)=>a-b);if(u.length<4)return false;for(let i=0;i<=u.length-4;i++){let ok=true;for(let j=1;j<4;j++)if(u[i+j]-u[i+j-1]!==1){ok=false;break;}if(ok)return true;}return false;})();
+  if (n>=4&&isFlush&&isStraight) return {name:'Straight Flush',pts:120};
+  if (counts[0]===4) return {name:'Four Knights',pts:80};
+  if (isStraight) return {name:'Straight',pts:60};
+  if (isFlush) return {name:'Flush',pts:60};
+  if (counts[0]===3&&counts[1]>=2) return {name:'Full House',pts:55};
+  if (counts[0]===3) return {name:'Trío',pts:30};
+  if (counts[0]===2&&counts[1]===2) return {name:'Doble Pareja',pts:30};
+  if (counts[0]===2) return {name:'Pareja',pts:15};
+  return {name:'Carta Alta',pts:Math.max(...vals)};
+}
+function bestCombo(cards) {
+  if (!cards.length) return {name:'—',pts:0};
+  if (cards.length<=5) return evalHand(cards);
+  const RANK={'Straight Flush':8,'Four Knights':7,'Straight':6,'Flush':6,'Full House':5,'Trío':4,'Doble Pareja':3,'Pareja':2,'Carta Alta':1,'—':0};
+  let best=evalHand(cards);
+  for(let s=0;s<cards.length;s++){const sub=cards.filter((_,i)=>i!==s);const h=evalHand(sub);if((RANK[h.name]||0)>(RANK[best.name]||0))best=h;else if((RANK[h.name]||0)===(RANK[best.name]||0)&&h.pts>best.pts)best=h;}
+  return best;
+}
+function pointSum(cards) { return cards.reduce((s,c)=>s+cardNum(c),0); }
+function totalScore(comm,extra) { const all=[...comm,...extra]; if(!all.length)return 0; const c=bestCombo(all); return c.pts+pointSum(all); }
+
+// ═══════════════════════════════════════════════════════════════════
+// MULTIPLAYER STATE
+// ═══════════════════════════════════════════════════════════════════
+let myRole = null;         // 'host' | 'guest'
+let roomId  = null;
+let roomRef = null;
+let gameState = null;      // local mirror of Firebase state
+
+// Local UI state (not synced)
+let thisRoundPlaced = [];
+let newlyDealtCount = 0; // how many cards at the END of hand are "new" (animate them)
+let dealAnimUntil = 0;   // timestamp — render adds deal classes while Date.now() < dealAnimUntil
+let revealingEnemyCards = false;
+let revealedEnemyCardIds = new Set();
+let md = null, dropTarget = null;
+
+// ═══════════════════════════════════════════════════════════════════
+// LOBBY
+// ═══════════════════════════════════════════════════════════════════
+function genCode() {
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code='';
+  for(let i=0;i<6;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+
+async function createRoom() {
+  // Clean up any stale rooms older than 2 hours
+  try {
+    const staleSnap = await db.ref('rooms').orderByChild('createdAt')
+      .endAt(Date.now() - 2 * 60 * 60 * 1000).once('value');
+    staleSnap.forEach(child => child.ref.remove());
+  } catch(e) {}
+
+  const code = genCode();
+  roomId = code;
+  myRole = 'host';
+  roomRef = db.ref('rooms/' + code);
+
+  const initState = buildInitialState();
+  await roomRef.set({
+    state: initState,
+    host: { connected: true },
+    guest: { connected: false },
+    createdAt: Date.now()
+  });
+
+  document.getElementById('lobbyCreate').style.display = 'none';
+  document.getElementById('lobbyWaiting').style.display = 'flex';
+  document.getElementById('lobbyWaiting').style.flexDirection = 'column';
+  document.getElementById('roomCodeDisplay').textContent = code;
+
+  // Clean up room when window closes
+  roomRef.onDisconnect().remove(); // Remove whole room if host disconnects
+
+  // Listen for guest joining
+  roomRef.child('guest/connected').on('value', snap => {
+    if (snap.val() === true) {
+      document.getElementById('waitingText').textContent = '¡Rival conectado! Iniciando...';
+      setTimeout(() => startOnlineGame(), 800);
+    }
+  });
+}
+
+async function joinRoom() {
+  const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+  if (code.length !== 6) { alert('Introduce un código de 6 caracteres'); return; }
+
+  const snap = await db.ref('rooms/' + code).once('value');
+  if (!snap.exists()) { alert('Sala no encontrada'); return; }
+
+  const data = snap.val();
+  if (data.guest && data.guest.connected) { alert('La sala ya está completa'); return; }
+
+  roomId = code;
+  myRole = 'guest';
+  roomRef = db.ref('rooms/' + code);
+
+  await roomRef.child('guest').set({ connected: true });
+  roomRef.child('guest/connected').onDisconnect().set(false);
+  // Also flag disconnection so host can clean up
+  roomRef.child('guestDisconnected').onDisconnect().set(true);
+
+  startOnlineGame();
+}
+
+function leaveRoom() {
+  if (roomRef) {
+    if (myRole === 'host') roomRef.remove();
+    else if (myRole === 'guest') roomRef.child('guest/connected').set(false);
+    roomRef.off(); // removes ALL listeners including rematch
+    roomRef = null;
+  }
+  roomId = null; myRole = null; gameState = null;
+  thisRoundPlaced = []; revealedEnemyCardIds = new Set(); newlyDealtCount = 0; dealAnimUntil = 0;
+  document.getElementById('gameScreen').style.display = 'none';
+  document.getElementById('lobbyScreen').style.display = 'flex';
+  document.getElementById('lobbyCreate').style.display = 'flex';
+  document.getElementById('lobbyCreate').style.flexDirection = 'column';
+  document.getElementById('lobbyWaiting').style.display = 'none';
+  document.getElementById('joinCodeInput').value = '';
+  document.getElementById('endOverlay').style.display = 'none';
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(roomId).then(() => {
+    const el = document.getElementById('roomCodeDisplay');
+    el.textContent = '¡Copiado!';
+    setTimeout(() => el.textContent = roomId, 1200);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// GAME STATE BUILDER
+// ═══════════════════════════════════════════════════════════════════
+function buildInitialState() {
+  const deck = shuffle(makeDeck());
+  let di = 0;
+  const draw = () => deck[di++];
+
+  const zones = [0,1,2].map(() => ({
+    communityCards: [draw(), draw()],
+    hostCards: [],
+    guestCards: [],
+  }));
+
+  const hostHand  = Array.from({length:5}, draw);
+  const guestHand = Array.from({length:5}, draw);
+  const remaining = deck.slice(di);
+
+  return {
+    round: 1,
+    phase: 'playing',       // 'playing' | 'host_ready' | 'guest_ready' | 'revealing' | 'done'
+    cardsToPlayThisRound: 2,
+    hostCardsPlayed: 0,
+    guestCardsPlayed: 0,
+    hostSwapsUsed: 0,
+    guestSwapsUsed: 0,
+    hostReady: false,
+    guestReady: false,
+    zones,
+    hostHand,
+    guestHand,
+    deck: remaining,
+    hostPlacedThisRound: [],
+    guestPlacedThisRound: [],
+    revealedHostCardIdx: [],   // indices into hostPlacedThisRound revealed to guest
+    revealedGuestCardIdx: [],
+    winner: null,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// START ONLINE GAME
+// ═══════════════════════════════════════════════════════════════════
+function startOnlineGame() {
+  document.getElementById('lobbyScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'block';
+  thisRoundPlaced = [];
+  revealedEnemyCardIds = new Set();
+
+  // Listen to state changes
+  roomRef.child('state').on('value', snap => {
+    const prev = gameState;
+    gameState = snap.val();
+    if (!gameState) {
+      // Room was deleted (host disconnected)
+      if (myRole === 'guest') {
+        alert('El anfitrión se ha desconectado. Volviendo al lobby.');
+        leaveRoom();
+      }
+      return;
+    }
+    onStateChange(prev, gameState);
+  });
+
+  // Listen to rematch node
+  roomRef.child('rematch').on('value', snap => {
+    const r = snap.val() || {};
+    const rivalRole = myRole === 'host' ? 'guest' : 'host';
+    const rivalWantsRematch = !!r[rivalRole];
+    const iWantRematch = !!r[myRole];
+
+    // Update UI if we're on the end screen
+    const endOverlay = document.getElementById('endOverlay');
+    if (endOverlay.style.display !== 'none') {
+      const statusEl = document.getElementById('rematchStatus');
+      const btn = document.getElementById('rematchBtn');
+      if (rivalWantsRematch && !iWantRematch) {
+        statusEl.textContent = '¡El rival quiere revancha!';
+        statusEl.style.color = 'var(--gold2)';
+      } else if (iWantRematch && !rivalWantsRematch) {
+        statusEl.textContent = 'Esperando al rival...';
+        statusEl.style.color = 'var(--muted)';
+      }
+      if (r.host && r.guest) {
+        statusEl.textContent = '¡Revancha aceptada! Iniciando...';
+        checkRematch();
+      }
+    }
+  });
+}
+
+function onStateChange(prev, gs) {
+  // If guest disconnected and we're the host, clean up the room
+  if (myRole === 'host' && gs.guestDisconnected) {
+    alert('El rival se ha desconectado. La sala se cerrará.');
+    leaveRoom();
+    return;
+  }
+  // If host disconnects the whole room disappears — guest gets null state
+  const wasRevealing = prev && prev.phase === 'revealing';
+  const nowRevealing = gs.phase === 'revealing';
+
+  if (!wasRevealing && nowRevealing) {
+    // Start reveal animation
+    revealingEnemyCards = true;
+    render();
+    const enemyPlaced = myRole === 'host' ? gs.guestPlacedThisRound : gs.hostPlacedThisRound;
+    const totalCards = (enemyPlaced || []).length;
+    const duration = totalCards > 0 ? (totalCards-1)*150+600 : 400;
+    setTimeout(() => {
+      revealingEnemyCards = false;
+      // Mark all as revealed
+      (enemyPlaced || []).forEach(p => revealedEnemyCardIds.add(p.cardKey));
+      // Host advances round
+      if (myRole === 'host') {
+        advanceRoundOrEnd(gs);
+      }
+    }, duration);
+  } else if (gs.phase === 'done') {
+    render();
+    showEndGame(gs);
+  } else if (prev && prev.phase === 'done' && gs.phase === 'playing') {
+    // Rematch accepted — new game starting
+    document.getElementById('endOverlay').style.display = 'none';
+    thisRoundPlaced = [];
+    revealedEnemyCardIds = new Set();
+    newlyDealtCount = 0;
+    dealAnimUntil = 0;
+    render();
+  } else {
+    // Reset local placed tracking on new round
+    if (prev && prev.round !== gs.round) {
+      thisRoundPlaced = [];
+      revealedEnemyCardIds = new Set();
+      const label = gs.round === TOTAL_ROUNDS ? 'RONDA FINAL' : `RONDA ${gs.round}`;
+      showRoundBanner(label, () => {
+        // Mark the last 2 cards as "newly dealt" for 800ms — survives Firebase re-renders
+        if (gs.round < TOTAL_ROUNDS) {
+          newlyDealtCount = 2;
+          dealAnimUntil = Date.now() + 800;
+        }
+        render();
+      });
+    } else {
+      render();
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ACTIONS — write to Firebase
+// ═══════════════════════════════════════════════════════════════════
+async function doPlaceCard(handIdx, zoneIdx) {
+  const gs = gameState;
+  const myHand = myRole === 'host' ? [...gs.hostHand] : [...gs.guestHand];
+  const myZoneCards = myRole === 'host' ? [...(gs.zones[zoneIdx].hostCards||[])] : [...(gs.zones[zoneIdx].guestCards||[])];
+  const myPlayed = myRole === 'host' ? gs.hostCardsPlayed : gs.guestCardsPlayed;
+  const mySwaps  = myRole === 'host' ? gs.hostSwapsUsed : gs.guestSwapsUsed;
+
+  if (myZoneCards.length >= ZONE_CAPACITY) return false;
+  if (zoneIdx >= Math.min(gs.round, 3)) return false;
+  if (myPlayed >= gs.cardsToPlayThisRound) return false;
+  if (gs.phase !== 'playing') return false;
+
+  const card = myHand.splice(handIdx, 1)[0];
+  myZoneCards.push(card);
+
+  // Unique key to track this placement for reveal animation
+  const cardKey = `${gs.round}_${myRole}_${Date.now()}`;
+  card._key = cardKey;
+
+  const myPlacedList = myRole === 'host'
+    ? [...(gs.hostPlacedThisRound||[]), {zoneIdx, card, cardKey}]
+    : [...(gs.guestPlacedThisRound||[]), {zoneIdx, card, cardKey}];
+
+  const update = {};
+  if (myRole === 'host') {
+    update['hostHand'] = myHand;
+    update[`zones/${zoneIdx}/hostCards`] = myZoneCards;
+    update['hostCardsPlayed'] = myPlayed + 1;
+    update['hostPlacedThisRound'] = myPlacedList;
+  } else {
+    update['guestHand'] = myHand;
+    update[`zones/${zoneIdx}/guestCards`] = myZoneCards;
+    update['guestCardsPlayed'] = myPlayed + 1;
+    update['guestPlacedThisRound'] = myPlacedList;
+  }
+
+  thisRoundPlaced.push({ card, zoneIdx, handIdx: myHand.length /* just track for retract */ });
+  await roomRef.child('state').update(update);
+  return true;
+}
+
+async function doRetractCard(zoneIdx, cardIdx) {
+  const gs = gameState;
+  const myZoneCards = myRole === 'host' ? [...(gs.zones[zoneIdx].hostCards||[])] : [...(gs.zones[zoneIdx].guestCards||[])];
+  const card = myZoneCards[cardIdx];
+
+  // Check it was placed this round
+  const myPlacedList = myRole === 'host' ? [...(gs.hostPlacedThisRound||[])] : [...(gs.guestPlacedThisRound||[])];
+  const pIdx = myPlacedList.findIndex(p => p.zoneIdx===zoneIdx && p.card.val===card.val && p.card.suit===card.suit);
+  if (pIdx === -1) return false;
+
+  myZoneCards.splice(cardIdx, 1);
+  myPlacedList.splice(pIdx, 1);
+  const myHand = myRole === 'host' ? [...gs.hostHand, card] : [...gs.guestHand, card];
+  const myPlayed = myRole === 'host' ? gs.hostCardsPlayed - 1 : gs.guestCardsPlayed - 1;
+
+  const update = {};
+  if (myRole === 'host') {
+    update['hostHand'] = myHand;
+    update[`zones/${zoneIdx}/hostCards`] = myZoneCards;
+    update['hostCardsPlayed'] = myPlayed;
+    update['hostPlacedThisRound'] = myPlacedList;
+  } else {
+    update['guestHand'] = myHand;
+    update[`zones/${zoneIdx}/guestCards`] = myZoneCards;
+    update['guestCardsPlayed'] = myPlayed;
+    update['guestPlacedThisRound'] = myPlacedList;
+  }
+
+  // Update local tracking too
+  const li = thisRoundPlaced.findIndex(p => p.zoneIdx===zoneIdx && p.card.val===card.val && p.card.suit===card.suit);
+  if (li !== -1) thisRoundPlaced.splice(li, 1);
+
+  // Unset myReady so the player can retract cards even after clicking "Terminar Ronda"
+  if (myRole === 'host') update['hostReady'] = false;
+  else update['guestReady'] = false;
+
+  await roomRef.child('state').update(update);
+  return true;
+}
+
+async function doDiscardCard(handIdx) {
+  const gs = gameState;
+  const mySwaps = myRole === 'host' ? gs.hostSwapsUsed : gs.guestSwapsUsed;
+  if (mySwaps >= MAX_SWAPS) return false;
+
+  const myHand = myRole === 'host' ? [...gs.hostHand] : [...gs.guestHand];
+  const deck = [...gs.deck];
+  myHand.splice(handIdx, 1);
+  const drawn = deck.shift();
+  if (!drawn) return false;
+  myHand.push(drawn);
+
+  const update = { deck };
+  if (myRole === 'host') { update['hostHand'] = myHand; update['hostSwapsUsed'] = mySwaps+1; }
+  else { update['guestHand'] = myHand; update['guestSwapsUsed'] = mySwaps+1; }
+
+  await roomRef.child('state').update(update);
+  // Animate the new card (last in hand after discard)
+  newlyDealtCount = 1;
+  dealAnimUntil = Date.now() + 800;
+  return true;
+}
+
+async function endRound() {
+  const gs = gameState;
+  if (gs.phase !== 'playing') return;
+
+  const myPlayed = myRole === 'host' ? gs.hostCardsPlayed : gs.guestCardsPlayed;
+  if (myPlayed < gs.cardsToPlayThisRound) {
+    const canPlace = gs.zones.some((z,i) => {
+      const myCards = myRole==='host' ? (z.hostCards||[]) : (z.guestCards||[]);
+      return i < Math.min(gs.round, 3) && myCards.length < ZONE_CAPACITY;
+    });
+    if (canPlace) return;
+  }
+
+  const update = myRole === 'host' ? { hostReady: true } : { guestReady: true };
+  await roomRef.child('state').update(update);
+
+  // Check if both are ready → trigger reveal
+  const newHostReady = myRole === 'host' ? true : gs.hostReady;
+  const newGuestReady = myRole === 'guest' ? true : gs.guestReady;
+  if (newHostReady && newGuestReady) {
+    await roomRef.child('state').update({ phase: 'revealing' });
+  }
+
+  render();
+}
+
+// Host-only: advance to next round or end game
+async function advanceRoundOrEnd(gs) {
+  if (gs.round >= TOTAL_ROUNDS) {
+    const result = computeEndGame(gs);
+    await roomRef.child('state').update({ phase: 'done', winner: result.winner, endData: result });
+  } else {
+    const nextRound = gs.round + 1;
+    const cardsToPlay = nextRound === TOTAL_ROUNDS ? 3 : 2;
+    const deck = [...gs.deck];
+    const hostHand = [...gs.hostHand];
+    const guestHand = [...gs.guestHand];
+
+    if (nextRound < TOTAL_ROUNDS) {
+      for (let i=0; i<cardsToPlay; i++) { if(deck.length) hostHand.push(deck.shift()); }
+      for (let i=0; i<cardsToPlay; i++) { if(deck.length) guestHand.push(deck.shift()); }
+    }
+
+    await roomRef.child('state').update({
+      round: nextRound,
+      phase: 'playing',
+      cardsToPlayThisRound: cardsToPlay,
+      hostCardsPlayed: 0,
+      guestCardsPlayed: 0,
+      hostSwapsUsed: 0,
+      guestSwapsUsed: 0,
+      hostReady: false,
+      guestReady: false,
+      hostPlacedThisRound: [],
+      guestPlacedThisRound: [],
+      hostHand,
+      guestHand,
+      deck,
+    });
+  }
+}
+
+function computeEndGame(gs) {
+  let hostWins=0, guestWins=0, hostTotal=0, guestTotal=0;
+  const breakdown = [];
+  for (let i=0;i<3;i++) {
+    const z = gs.zones[i];
+    const hS = totalScore(z.communityCards, z.hostCards||[]);
+    const gS = totalScore(z.communityCards, z.guestCards||[]);
+    hostTotal+=hS; guestTotal+=gS;
+    if (hS>gS) { hostWins++; breakdown.push({zone:i,winner:'host',hS,gS}); }
+    else if (gS>hS) { guestWins++; breakdown.push({zone:i,winner:'guest',hS,gS}); }
+    else { breakdown.push({zone:i,winner:'tie',hS,gS}); }
+  }
+  let winner='tie';
+  if (hostWins>=2) winner='host';
+  else if (guestWins>=2) winner='guest';
+  else if (hostTotal>guestTotal) winner='host';
+  else if (guestTotal>hostTotal) winner='guest';
+  return { winner, hostWins, guestWins, hostTotal, guestTotal, breakdown };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════════
+function render() {
+  if (!gameState) return;
+  renderInfo();
+  renderZones();
+  renderHand();
+}
+
+function renderInfo() {
+  const gs = gameState;
+  const myPlayed = myRole==='host' ? gs.hostCardsPlayed : gs.guestCardsPlayed;
+  const myReady  = myRole==='host' ? gs.hostReady : gs.guestReady;
+  const isMyTurn = gs.phase === 'playing' && !myReady;
+
+  document.getElementById('roundDisplay').textContent = gs.round;
+  document.getElementById('phaseDisplay').textContent =
+    gs.phase === 'playing' ? (myReady ? 'Esperando rival...' : 'Tu turno') :
+    gs.phase === 'revealing' ? 'Revelando...' : 'Fin';
+
+  document.getElementById('cardsPlayedInfo').textContent = `${myPlayed} / ${gs.cardsToPlayThisRound} cartas jugadas`;
+
+  const badge = document.getElementById('turnBadge');
+  badge.textContent = isMyTurn ? 'TU TURNO' : (gs.phase==='playing' ? 'RIVAL JUGANDO' : gs.phase==='revealing' ? 'REVELANDO' : 'FIN');
+  badge.className = 'turn-badge ' + (isMyTurn ? 'my-turn' : 'their-turn');
+
+  const remaining = gs.cardsToPlayThisRound - myPlayed;
+  document.getElementById('statusBar').textContent =
+    gs.phase !== 'playing'  ? 'Revelando jugadas del rival...' :
+    myReady                 ? 'Esperando al rival...' :
+    remaining > 0           ? `Coloca ${remaining} carta(s) en las zonas (Ronda ${gs.round}/${TOTAL_ROUNDS})` :
+                              'Listo para terminar la ronda.';
+
+  const canEnd = isMyTurn && !myReady;
+  document.getElementById('endRoundBtn').disabled = !canEnd;
+
+  const swapLabel = document.getElementById('swapCountLabel');
+  const mySwaps = myRole==='host' ? gs.hostSwapsUsed : gs.guestSwapsUsed;
+  if (swapLabel) swapLabel.textContent = `(${MAX_SWAPS-mySwaps} restantes)`;
+
+  const discardArea = document.getElementById('discardArea');
+  if (discardArea) {
+    const isTarget = dropTarget === 'discard';
+    const isFull = mySwaps >= MAX_SWAPS;
+    discardArea.className = 'discard-area'+(isTarget?' drop-target-discard':'')+(isFull?' full':'');
+    discardArea.innerHTML = isFull
+      ? `<span style="font-size:0.65rem;color:var(--muted);text-align:center;">Sin cambios</span>`
+      : `<span style="font-size:1.5rem;color:var(--muted);">↩</span>`;
+  }
+}
+
+function renderZones() {
+  const gs = gameState;
+  const container = document.getElementById('zonesRow');
+  const zoneNames = ['ZONA ROJA','ZONA AZUL','ZONA VIOLETA'];
+  const myCards  = zi => myRole==='host' ? (gs.zones[zi].hostCards||[]) : (gs.zones[zi].guestCards||[]);
+  const oppCards = zi => myRole==='host' ? (gs.zones[zi].guestCards||[]) : (gs.zones[zi].hostCards||[]);
+  const enemyPlacedThisRound = myRole==='host' ? (gs.guestPlacedThisRound||[]) : (gs.hostPlacedThisRound||[]);
+
+  const newlyRevealedByZone = {};
+  if (revealingEnemyCards) {
+    let di=0;
+    for (const move of enemyPlacedThisRound) {
+      if (!newlyRevealedByZone[move.zoneIdx]) newlyRevealedByZone[move.zoneIdx]=[];
+      newlyRevealedByZone[move.zoneIdx].push({card:move.card,delayIdx:di++});
+    }
+  }
+
+  let html = '';
+  for (let i=0;i<3;i++) {
+    const z = gs.zones[i];
+    const locked = i >= Math.min(gs.round, 3);
+    const mine = myCards(i);
+    const opp  = oppCards(i);
+    const pScore = totalScore(z.communityCards, mine);
+    const eScore = totalScore(z.communityCards, opp);
+    const pCombo = bestCombo([...z.communityCards,...mine]);
+    const eCombo = bestCombo([...z.communityCards,...opp]);
+
+    const commHtml = locked
+      ? `<div class="playing-card face-down"></div><div class="playing-card face-down"></div>`
+      : z.communityCards.map(c=>cardHtml(c,false,false,'small')).join('');
+
+    // Opponent cards
+    let oppHtml = '';
+    const newlyRevealed = newlyRevealedByZone[i]||[];
+    const revealedKeys = new Set(
+      enemyPlacedThisRound.filter(p=>revealedEnemyCardIds.has(p.cardKey)).map(p=>p.cardKey)
+    );
+    for (let ci=0;ci<opp.length;ci++) {
+      const c = opp[ci];
+      const matchMove = enemyPlacedThisRound.find(p=>p.zoneIdx===i&&p.card.val===c.val&&p.card.suit===c.suit);
+      const isNew = revealingEnemyCards && matchMove && newlyRevealed.some(n=>n.card.val===c.val&&n.card.suit===c.suit);
+      const isRevealed = matchMove && revealedEnemyCardIds.has(matchMove.cardKey);
+      const isPrevRound = !matchMove; // placed in a previous round → already visible
+
+      if (isNew) {
+        const nr = newlyRevealed.find(n=>n.card.val===c.val&&n.card.suit===c.suit);
+        const color = SUIT_COLOR[c.suit];
+        oppHtml += `<div class="card-flip-wrapper"><div class="card-flip-inner delay-${nr.delayIdx+1}"><div class="playing-card ${color}"><div class="card-val">${c.val}</div><div class="card-suit">${c.suit}</div></div></div></div>`;
+      } else if (isRevealed || isPrevRound) {
+        oppHtml += cardHtml(c,false,false,'small');
+      } else {
+        oppHtml += `<div class="playing-card face-down"></div>`;
+      }
+    }
+
+    // My cards
+    const myReady = myRole==='host' ? gs.hostReady : gs.guestReady;
+    const myCardsHtml = mine.map((c,ci)=>{
+      const color = SUIT_COLOR[c.suit];
+      const isRetractable = gs.phase==='playing' && !myReady &&
+        thisRoundPlaced.some(p=>p.zoneIdx===i&&p.card.val===c.val&&p.card.suit===c.suit);
+      const isGhost = md?.source?.type==='zone'&&md.source.zoneIdx===i&&md.source.cardIdx===ci;
+      return `<div class="playing-card ${color} ${isRetractable?'retractable draggable-card':''} ${isGhost?'dragging-ghost':''}"
+        onmousedown="${isRetractable?`startDragFromZone(event,${i},${ci})`:''}">
+        <div class="card-val">${c.val}</div><div class="card-suit">${c.suit}</div></div>`;
+    }).join('');
+
+    html += `<div class="zone zone-${i} ${locked?'locked':''}" id="zone-${i}">
+      <div class="zone-header">
+        <span class="zone-title">${zoneNames[i]}</span>
+        <span class="zone-status">${locked?'BLOCKED':`RONDA ${i+1}`}</span>
+      </div>
+      <div class="zone-players">
+        <div class="player-row">
+          <div class="player-row-label">RIVAL (${opp.length}/${ZONE_CAPACITY})</div>
+          <div class="cards-area">${oppHtml}</div>
+          <div class="combo-label">${!locked&&(gs.phase!=='playing'||revealingEnemyCards)&&eCombo.name!=='—'?`${eCombo.name} — ${eScore}pts`:''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;">
+          <div style="display:flex;gap:6px;justify-content:center;">${commHtml}</div>
+        </div>
+        <div class="player-row">
+          <div class="player-row-label">TÚ (${mine.length}/${ZONE_CAPACITY})</div>
+          <div class="cards-area ${!locked&&dropTarget===i?'drop-target':''}" data-drop-zone="${i}">
+            ${myCardsHtml}
+          </div>
+          <div class="combo-label">${locked?'':(pCombo.name!=='—'?`${pCombo.name} — ${pCombo.pts}pts`:mine.length===0?'Sin cartas':'')}</div>
+        </div>
+      </div>`;
+    if (!locked) {
+      const pS2 = pointSum([...z.communityCards,...mine]);
+      const pC2 = bestCombo([...z.communityCards,...mine]);
+      html += `<div class="zone-scores">
+        <div class="score-item"><div class="val" style="font-size:.85rem">${pC2.pts}</div><div class="lbl">COMBO</div></div>
+        <div class="score-item"><div class="val" style="font-size:.85rem;color:var(--muted)">+</div></div>
+        <div class="score-item"><div class="val" style="font-size:.85rem">${pS2}</div><div class="lbl">SUMA</div></div>
+        <div class="score-item"><div class="val" style="font-size:.85rem;color:var(--muted)">=</div></div>
+        <div class="score-item"><div class="val">${pScore}</div><div class="lbl">TOTAL</div></div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  container.innerHTML = html;
+}
+
+function cardHtml(card,faceDown,selected,size) {
+  if (faceDown) return `<div class="playing-card face-down ${size!=='small'?'hand-playing-card':''}"></div>`;
+  const color = SUIT_COLOR[card.suit];
+  return `<div class="playing-card ${color} ${selected?'selected':''} ${size!=='small'?'hand-playing-card':''}">
+    <div class="card-val">${card.val}</div><div class="card-suit">${card.suit}</div></div>`;
+}
+
+function renderHand() {
+  const gs = gameState;
+  const myHand = myRole==='host' ? gs.hostHand : gs.guestHand;
+  const myReady = myRole==='host' ? gs.hostReady : gs.guestReady;
+  const container = document.getElementById('handCards');
+  const isDraggingFromHand = md?.source?.type==='hand';
+  container.className = 'hand-cards'+(dropTarget==='hand'?' drop-target-hand':'');
+  container.setAttribute('data-drop-hand','1');
+  const handLen = (myHand||[]).length;
+  const animating = newlyDealtCount > 0 && Date.now() < dealAnimUntil;
+  container.innerHTML = (myHand||[]).map((c,i)=>{
+    const color = SUIT_COLOR[c.suit];
+    const isGhost = isDraggingFromHand && md.source.idx===i;
+    const canDrag = gs.phase==='playing' && !myReady;
+    let dealClass = '';
+    if (animating) {
+      if (newlyDealtCount === 2 && i === handLen - 2) dealClass = 'card-dealt';
+      else if (i === handLen - 1) dealClass = newlyDealtCount === 2 ? 'card-dealt-2' : 'card-dealt';
+    }
+    return `<div class="playing-card ${color} hand-playing-card ${canDrag?'draggable-card':''} ${isGhost?'dragging-ghost':''} ${dealClass}"
+      onmousedown="${canDrag?`startDragFromHand(event,${i})`:''}">
+      <div class="card-val">${c.val}</div><div class="card-suit">${c.suit}</div></div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DRAG & DROP
+// ═══════════════════════════════════════════════════════════════════
+const ghost = document.getElementById('dragGhost');
+
+function startDragFromHand(e, idx) {
+  if (!gameState || gameState.phase!=='playing') return;
+  const myReady = myRole==='host' ? gameState.hostReady : gameState.guestReady;
+  if (myReady) return;
+  e.preventDefault();
+  const myHand = myRole==='host' ? gameState.hostHand : gameState.guestHand;
+  md = { source:{type:'hand',idx}, card:myHand[idx] };
+  beginDrag(e, myHand[idx]);
+}
+function startDragFromZone(e, zoneIdx, cardIdx) {
+  if (!gameState || gameState.phase!=='playing') return;
+  const myReady = myRole==='host' ? gameState.hostReady : gameState.guestReady;
+  if (myReady) return;
+  const mine = myRole==='host' ? (gameState.zones[zoneIdx].hostCards||[]) : (gameState.zones[zoneIdx].guestCards||[]);
+  const card = mine[cardIdx];
+  if (!thisRoundPlaced.some(p=>p.zoneIdx===zoneIdx&&p.card.val===card.val&&p.card.suit===card.suit)) return;
+  e.preventDefault();
+  md = { source:{type:'zone',zoneIdx,cardIdx,card}, card };
+  beginDrag(e, card);
+}
+function beginDrag(e, card) {
+  const color = SUIT_COLOR[card.suit];
+  ghost.className = `playing-card ${color}`;
+  ghost.style.cssText = 'display:flex;width:44px;height:62px;font-size:0.9rem;font-weight:700;flex-direction:column;align-items:center;justify-content:center;background:#f5f0e8;border-radius:4px;';
+  ghost.style.border = `1px solid ${color==='red'?'#daa':'#aaa'}`;
+  ghost.style.color  = color==='red'?'#c41a1a':'#111';
+  ghost.innerHTML = `<div style="font-size:.75rem;font-weight:900;line-height:1">${card.val}</div><div style="font-size:.9rem;line-height:1">${card.suit}</div>`;
+  positionGhost(e);
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+  document.body.style.userSelect = 'none';
+  render();
+}
+function positionGhost(e) { ghost.style.left=(e.clientX-22)+'px'; ghost.style.top=(e.clientY-31)+'px'; }
+function onMouseMove(e) {
+  if (!md) return;
+  positionGhost(e);
+  ghost.style.display='none';
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  ghost.style.display='flex';
+  let newTarget=null;
+  if (el) {
+    const za = el.closest('[data-drop-zone]');
+    if (za && md.source.type==='hand') {
+      const zi=parseInt(za.dataset.dropZone);
+      const gs=gameState;
+      const myCards = myRole==='host'?(gs.zones[zi].hostCards||[]):(gs.zones[zi].guestCards||[]);
+      const mySwaps = myRole==='host'?gs.hostSwapsUsed:gs.guestSwapsUsed;
+      if (zi<Math.min(gs.round,3)&&myCards.length<ZONE_CAPACITY) newTarget=zi;
+    }
+    const ha=el.closest('[data-drop-hand]');
+    if (ha&&md.source.type==='zone') newTarget='hand';
+    const da=el.closest('[data-drop-discard]');
+    if (da&&md.source.type==='hand') {
+      const mySwaps=myRole==='host'?gameState.hostSwapsUsed:gameState.guestSwapsUsed;
+      if (mySwaps<MAX_SWAPS) newTarget='discard';
+    }
+  }
+  if (newTarget!==dropTarget) { dropTarget=newTarget; render(); }
+}
+async function onMouseUp(e) {
+  document.removeEventListener('mousemove', onMouseMove);
+  document.removeEventListener('mouseup', onMouseUp);
+  document.body.style.userSelect='';
+  ghost.style.display='none';
+  if (md && dropTarget!==null) {
+    if (typeof dropTarget==='number'&&md.source.type==='hand') await doPlaceCard(md.source.idx,dropTarget);
+    else if (dropTarget==='hand'&&md.source.type==='zone') await doRetractCard(md.source.zoneIdx,md.source.cardIdx);
+    else if (dropTarget==='discard'&&md.source.type==='hand') await doDiscardCard(md.source.idx);
+  }
+  md=null; dropTarget=null;
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// END GAME
+// ═══════════════════════════════════════════════════════════════════
+function showEndGame(gs) {
+  const result = gs.endData || computeEndGame(gs);
+  const iWon = (myRole==='host'&&result.winner==='host')||(myRole==='guest'&&result.winner==='guest');
+  const title = result.winner==='tie'?'¡Empate!':iWon?'¡Victoria!':'¡Derrota!';
+  const myPts = myRole==='host'?result.hostTotal:result.guestTotal;
+  const oppPts = myRole==='host'?result.guestTotal:result.hostTotal;
+  document.getElementById('endTitle').textContent = title;
+  document.getElementById('endMsg').textContent = `Puntuación: Tú ${myPts} — Rival ${oppPts}`;
+  let scHtml='';
+  for (const b of result.breakdown) {
+    const iWonZone = (myRole==='host'&&b.winner==='host')||(myRole==='guest'&&b.winner==='guest');
+    const wColor = b.winner==='tie'?'#aaa':iWonZone?'#4cb87a':'#c94c4c';
+    const wLabel = b.winner==='tie'?'EMPATE':iWonZone?'TÚ':'RIVAL';
+    const myS = myRole==='host'?b.hS:b.gS;
+    const oppS = myRole==='host'?b.gS:b.hS;
+    scHtml+=`<div class="score-zone-box"><div class="zone-name" style="color:${wColor}">ZONA ${b.zone+1}</div>
+      <div style="color:#ccc;font-size:0.8rem;">Tú: <b>${myS}</b></div>
+      <div style="color:#7a9ac9;font-size:0.8rem;">Rival: <b>${oppS}</b></div>
+      <div class="winner-tag" style="color:${wColor}">${wLabel}</div></div>`;
+  }
+  document.getElementById('endScores').innerHTML = scHtml;
+  document.getElementById('endOverlay').style.display='flex';
+  // Reset rematch UI
+  document.getElementById('rematchBtn').disabled = false;
+  document.getElementById('rematchStatus').textContent = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REMATCH
+// ═══════════════════════════════════════════════════════════════════
+async function requestRematch() {
+  document.getElementById('rematchBtn').disabled = true;
+  document.getElementById('rematchStatus').textContent = 'Esperando al rival...';
+  await roomRef.child('rematch').child(myRole).set(true);
+}
+
+async function checkRematch() {
+  const snap = await roomRef.child('rematch').once('value');
+  const r = snap.val() || {};
+  if (r.host && r.guest) {
+    // Both want rematch — host resets the game state
+    await roomRef.child('rematch').remove();
+    if (myRole === 'host') {
+      await roomRef.child('state').set(buildInitialState());
+    }
+  }
+}
+function showRoundBanner(text, onDone) {
+  const banner=document.getElementById('roundBanner');
+  const bt=document.getElementById('roundBannerText');
+  bt.textContent=text;
+  bt.style.animation='none'; bt.offsetHeight; bt.style.animation='';
+  banner.style.display='flex';
+  setTimeout(()=>{ banner.style.display='none'; onDone(); }, 1700);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RULES PANEL
+// ═══════════════════════════════════════════════════════════════════
+let _rulesOpen=false;
+function toggleRules() {
+  _rulesOpen=!_rulesOpen;
+  document.getElementById('rulesPanel').style.display=_rulesOpen?'block':'none';
+}
+document.addEventListener('mousedown',e=>{
+  if(_rulesOpen&&!document.getElementById('rulesPanel').contains(e.target)&&!document.getElementById('rulesBtn').contains(e.target)){
+    _rulesOpen=false; document.getElementById('rulesPanel').style.display='none';
+  }
+});
+
+</script>
+</body>
+</html>
