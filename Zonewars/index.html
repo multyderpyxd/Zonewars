@@ -470,7 +470,7 @@
 // FIREBASE CONFIG
 // ═══════════════════════════════════════════════════════════════════
 const firebaseConfig = {
-  apiKey: import.meta.env.FIREBASE_API_KEY,
+  apiKey: "",
   authDomain: "zonewars-e21ef.firebaseapp.com",
   databaseURL: "https://zonewars-e21ef-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "zonewars-e21ef",
@@ -920,26 +920,36 @@ function onStateChange(prev, gs) {
   const nowRevealing = gs.phase === 'revealing';
 
   if (!wasRevealing && nowRevealing) {
+    console.log('Starting reveal animation');
     // Start reveal animation
     revealingEnemyCards = true;
     render();
     const enemyPlaced = myRole === 'host' ? gs.guestPlacedThisRound : gs.hostPlacedThisRound;
     const totalCards = (enemyPlaced || []).length;
-    const duration = totalCards > 0 ? (totalCards-1)*150+600 : 400;
+    // Calculate duration based on number of cards
+    const duration = totalCards > 0 ? (totalCards - 1) * 150 + 600 : 400;
+    console.log('Reveal duration:', duration, 'ms for', totalCards, 'cards');
+    
     setTimeout(() => {
+      console.log('Reveal animation complete, marking cards as revealed');
       revealingEnemyCards = false;
       // Mark all as revealed
       (enemyPlaced || []).forEach(p => revealedEnemyCardIds.add(p.cardKey));
+      render();
+      
       // Host advances round
       if (myRole === 'host') {
+        console.log('Host advancing round');
         advanceRoundOrEnd(gs);
       }
     }, duration);
   } else if (gs.phase === 'done') {
+    console.log('Game is done');
     render();
     showEndGame(gs);
   } else if (prev && prev.phase === 'done' && gs.phase === 'playing') {
     // Rematch accepted — new game starting
+    console.log('Rematch starting');
     document.getElementById('endOverlay').style.display = 'none';
     thisRoundPlaced = [];
     revealedEnemyCardIds = new Set();
@@ -956,6 +966,7 @@ function onStateChange(prev, gs) {
   } else {
     // Reset local placed tracking on new round
     if (prev && prev.round !== gs.round) {
+      console.log('New round detected:', gs.round);
       thisRoundPlaced = [];
       revealedEnemyCardIds = new Set();
       const label = gs.round === TOTAL_ROUNDS ? 'RONDA FINAL' : `RONDA ${gs.round}`;
@@ -977,22 +988,58 @@ function onStateChange(prev, gs) {
 // ACTIONS — write to Firebase
 // ═══════════════════════════════════════════════════════════════════
 async function doPlaceCard(handIdx, zoneIdx) {
-  const gs = gameState;
-  const myHand = myRole === 'host' ? [...gs.hostHand] : [...gs.guestHand];
-  const myZoneCards = myRole === 'host' ? [...(gs.zones[zoneIdx].hostCards||[])] : [...(gs.zones[zoneIdx].guestCards||[])];
+  const gs = gameState; // IMPORTANTE: usar gameState actual
+  
+  if (!gs) {
+    console.error('gameState is null');
+    return false;
+  }
+
+  const myHand = myRole === 'host' ? (gs.hostHand || []) : (gs.guestHand || []);
+  
+  if (!Array.isArray(myHand) || myHand.length === 0) {
+    console.error('Invalid hand:', myHand);
+    return false;
+  }
+
+  if (handIdx < 0 || handIdx >= myHand.length) {
+    console.error('Invalid hand index:', handIdx, 'hand length:', myHand.length);
+    return false;
+  }
+
+  const myZoneCards = myRole === 'host' ? (gs.zones[zoneIdx].hostCards || []) : (gs.zones[zoneIdx].guestCards || []);
   const myPlayed = myRole === 'host' ? gs.hostCardsPlayed : gs.guestCardsPlayed;
-  const mySwaps  = myRole === 'host' ? gs.hostSwapsUsed : gs.guestSwapsUsed;
 
-  if (myZoneCards.length >= ZONE_CAPACITY) return false;
-  if (zoneIdx >= Math.min(gs.round, 3)) return false;
-  if (myPlayed >= gs.cardsToPlayThisRound) return false;
-  if (gs.phase !== 'playing') return false;
+  if (myZoneCards.length >= ZONE_CAPACITY) {
+    console.error('Zone at capacity');
+    return false;
+  }
+  if (zoneIdx >= Math.min(gs.round, 3)) {
+    console.error('Zone not unlocked yet:', zoneIdx, 'vs', Math.min(gs.round, 3));
+    return false;
+  }
+  if (myPlayed >= gs.cardsToPlayThisRound) {
+    console.error('Already played all cards for this round:', myPlayed, 'vs', gs.cardsToPlayThisRound);
+    return false;
+  }
+  if (gs.phase !== 'playing') {
+    console.error('Not in playing phase, phase is:', gs.phase);
+    return false;
+  }
 
-  const card = myHand.splice(handIdx, 1)[0];
-  myZoneCards.push(card);
+  // Crear copia de mano y zona para modificar
+  const newMyHand = [...myHand];
+  const card = newMyHand.splice(handIdx, 1)[0];
+  
+  if (!card) {
+    console.error('Card not found at hand index', handIdx);
+    return false;
+  }
+
+  const newMyZoneCards = [...myZoneCards, card];
 
   // Unique key to track this placement for reveal animation
-  const cardKey = `${gs.round}_${myRole}_${Date.now()}`;
+  const cardKey = `${gs.round}_${myRole}_${Date.now()}_${Math.random()}`;
   card._key = cardKey;
 
   const myPlacedList = myRole === 'host'
@@ -1001,79 +1048,135 @@ async function doPlaceCard(handIdx, zoneIdx) {
 
   const update = {};
   if (myRole === 'host') {
-    update['hostHand'] = myHand;
-    update[`zones/${zoneIdx}/hostCards`] = myZoneCards;
+    update['hostHand'] = newMyHand;
+    update[`zones/${zoneIdx}/hostCards`] = newMyZoneCards;
     update['hostCardsPlayed'] = myPlayed + 1;
     update['hostPlacedThisRound'] = myPlacedList;
   } else {
-    update['guestHand'] = myHand;
-    update[`zones/${zoneIdx}/guestCards`] = myZoneCards;
+    update['guestHand'] = newMyHand;
+    update[`zones/${zoneIdx}/guestCards`] = newMyZoneCards;
     update['guestCardsPlayed'] = myPlayed + 1;
     update['guestPlacedThisRound'] = myPlacedList;
   }
 
-  thisRoundPlaced.push({ card, zoneIdx, handIdx: myHand.length /* just track for retract */ });
+  console.log('Placing card:', card.val, card.suit, 'in zone', zoneIdx, 'new hand length:', newMyHand.length);
+  thisRoundPlaced.push({ card, zoneIdx, handIdx: newMyHand.length });
   await roomRef.child('state').update(update);
   return true;
 }
 
 async function doRetractCard(zoneIdx, cardIdx) {
-  const gs = gameState;
-  const myZoneCards = myRole === 'host' ? [...(gs.zones[zoneIdx].hostCards||[])] : [...(gs.zones[zoneIdx].guestCards||[])];
+  const gs = gameState; // IMPORTANTE: usar gameState actual, no el parámetro antiguo
+  
+  if (!gs) {
+    console.error('gameState is null');
+    return false;
+  }
+
+  const myZoneCards = myRole === 'host' ? (gs.zones[zoneIdx].hostCards || []) : (gs.zones[zoneIdx].guestCards || []);
   const card = myZoneCards[cardIdx];
+  
+  if (!card) {
+    console.error('Card not found at zone', zoneIdx, 'cardIdx', cardIdx);
+    return false;
+  }
 
-  // Check it was placed this round
-  const myPlacedList = myRole === 'host' ? [...(gs.hostPlacedThisRound||[])] : [...(gs.guestPlacedThisRound||[])];
-  const pIdx = myPlacedList.findIndex(p => p.zoneIdx===zoneIdx && p.card.val===card.val && p.card.suit===card.suit);
-  if (pIdx === -1) return false;
+  // Check it was placed this round by matching the exact object or by suit+val
+  const myPlacedList = myRole === 'host' ? (gs.hostPlacedThisRound || []) : (gs.guestPlacedThisRound || []);
+  const pIdx = myPlacedList.findIndex(p => 
+    p.zoneIdx === zoneIdx && 
+    p.card.val === card.val && 
+    p.card.suit === card.suit
+  );
+  
+  if (pIdx === -1) {
+    console.error('Card not found in placed list for this round. Placed cards:', myPlacedList);
+    return false;
+  }
 
-  myZoneCards.splice(cardIdx, 1);
-  myPlacedList.splice(pIdx, 1);
-  const myHand = myRole === 'host' ? [...gs.hostHand, card] : [...gs.guestHand, card];
+  console.log('Retracting card:', card.val, card.suit, 'from zone', zoneIdx);
+
+  // Crear copias limpias para modificar
+  const newMyZoneCards = [...myZoneCards];
+  newMyZoneCards.splice(cardIdx, 1);
+  
+  const newMyPlacedList = [...myPlacedList];
+  newMyPlacedList.splice(pIdx, 1);
+  
+  const myHand = myRole === 'host' 
+    ? [...(gs.hostHand || []), card] 
+    : [...(gs.guestHand || []), card];
+  
   const myPlayed = myRole === 'host' ? gs.hostCardsPlayed - 1 : gs.guestCardsPlayed - 1;
 
   const update = {};
   if (myRole === 'host') {
     update['hostHand'] = myHand;
-    update[`zones/${zoneIdx}/hostCards`] = myZoneCards;
+    update[`zones/${zoneIdx}/hostCards`] = newMyZoneCards;
     update['hostCardsPlayed'] = myPlayed;
-    update['hostPlacedThisRound'] = myPlacedList;
+    update['hostPlacedThisRound'] = newMyPlacedList;
+    update['hostReady'] = false;
   } else {
     update['guestHand'] = myHand;
-    update[`zones/${zoneIdx}/guestCards`] = myZoneCards;
+    update[`zones/${zoneIdx}/guestCards`] = newMyZoneCards;
     update['guestCardsPlayed'] = myPlayed;
-    update['guestPlacedThisRound'] = myPlacedList;
+    update['guestPlacedThisRound'] = newMyPlacedList;
+    update['guestReady'] = false;
   }
 
   // Update local tracking too
   const li = thisRoundPlaced.findIndex(p => p.zoneIdx===zoneIdx && p.card.val===card.val && p.card.suit===card.suit);
   if (li !== -1) thisRoundPlaced.splice(li, 1);
 
-  // Unset myReady so the player can retract cards even after clicking "Terminar Ronda"
-  if (myRole === 'host') update['hostReady'] = false;
-  else update['guestReady'] = false;
-
+  console.log('Retract successful, new hand length:', myHand.length);
   await roomRef.child('state').update(update);
   return true;
 }
 
 async function doDiscardCard(handIdx) {
-  const gs = gameState;
-  const mySwaps = myRole === 'host' ? gs.hostSwapsUsed : gs.guestSwapsUsed;
-  if (mySwaps >= MAX_SWAPS) return false;
+  const gs = gameState; // IMPORTANTE: usar gameState actual
+  
+  if (!gs) {
+    console.error('gameState is null');
+    return false;
+  }
 
-  const myHand = myRole === 'host' ? [...gs.hostHand] : [...gs.guestHand];
-  const deck = [...gs.deck];
+  const mySwaps = myRole === 'host' ? gs.hostSwapsUsed : gs.guestSwapsUsed;
+  if (mySwaps >= MAX_SWAPS) {
+    console.error('Already used all swaps');
+    return false;
+  }
+
+  const myHand = myRole === 'host' ? [...(gs.hostHand || [])] : [...(gs.guestHand || [])];
+  const deck = [...(gs.deck || [])];
+  
+  if (handIdx < 0 || handIdx >= myHand.length) {
+    console.error('Invalid hand index:', handIdx);
+    return false;
+  }
+
   myHand.splice(handIdx, 1);
   const drawn = deck.shift();
-  if (!drawn) return false;
+  
+  if (!drawn) {
+    console.error('No cards left in deck');
+    return false;
+  }
+
   myHand.push(drawn);
 
   const update = { deck };
-  if (myRole === 'host') { update['hostHand'] = myHand; update['hostSwapsUsed'] = mySwaps+1; }
-  else { update['guestHand'] = myHand; update['guestSwapsUsed'] = mySwaps+1; }
+  if (myRole === 'host') { 
+    update['hostHand'] = myHand; 
+    update['hostSwapsUsed'] = mySwaps + 1; 
+  } else { 
+    update['guestHand'] = myHand; 
+    update['guestSwapsUsed'] = mySwaps + 1; 
+  }
 
+  console.log('Discarding card at index', handIdx, ', new swap count:', mySwaps + 1);
   await roomRef.child('state').update(update);
+  
   // Animate the new card (last in hand after discard)
   newlyDealtCount = 1;
   dealAnimUntil = Date.now() + 800;
@@ -1109,7 +1212,9 @@ async function endRound() {
 // Host-only: advance to next round or end game
 async function advanceRoundOrEnd(gs) {
   if (gs.round >= TOTAL_ROUNDS) {
+    console.log('Game over - round', gs.round, '>=', TOTAL_ROUNDS);
     const result = computeEndGame(gs);
+    console.log('End game result:', result);
     await roomRef.child('state').update({ phase: 'done', winner: result.winner, endData: result });
   } else {
     const nextRound = gs.round + 1;
@@ -1118,9 +1223,15 @@ async function advanceRoundOrEnd(gs) {
     const hostHand = [...gs.hostHand];
     const guestHand = [...gs.guestHand];
 
+    console.log('Advancing to round', nextRound, 'cardsToPlay:', cardsToPlay);
+
+    // Solo repartir cartas si no es la última ronda
     if (nextRound < TOTAL_ROUNDS) {
+      console.log('Dealing', cardsToPlay, 'cards to each player');
       for (let i=0; i<cardsToPlay; i++) { if(deck.length) hostHand.push(deck.shift()); }
       for (let i=0; i<cardsToPlay; i++) { if(deck.length) guestHand.push(deck.shift()); }
+    } else {
+      console.log('Last round - no new cards to deal');
     }
 
     // Assign modifier to the newly unlocked zone (zone index = nextRound - 1, max zone 2)
@@ -1134,6 +1245,7 @@ async function advanceRoundOrEnd(gs) {
       }
       zoneUpdates[`zones/${newZoneIdx}/modifier`] = newMod;
       zoneUpdates[`zones/${newZoneIdx}/modifierRevealed`] = true;
+      console.log('Zone', newZoneIdx, 'modifier:', newMod);
     }
 
     await roomRef.child('state').update({
@@ -1165,9 +1277,11 @@ function computeEndGame(gs) {
     const gR = totalScoreWithZE(z.communityCards, z.guestCards||[], z.modifier);
     const hS = hR.total, gS = gR.total;
     hostTotal+=hS; guestTotal+=gS;
-    if (hS>gS) { hostWins++; breakdown.push({zone:i,winner:'host',hS,gS,modifier:z.modifier}); }
-    else if (gS>hS) { guestWins++; breakdown.push({zone:i,winner:'guest',hS,gS,modifier:z.modifier}); }
-    else { breakdown.push({zone:i,winner:'tie',hS,gS,modifier:z.modifier}); }
+    // Usar null en lugar de undefined para Firebase
+    const modifierValue = z.modifier || null;
+    if (hS>gS) { hostWins++; breakdown.push({zone:i,winner:'host',hS,gS,modifier:modifierValue}); }
+    else if (gS>hS) { guestWins++; breakdown.push({zone:i,winner:'guest',hS,gS,modifier:modifierValue}); }
+    else { breakdown.push({zone:i,winner:'tie',hS,gS,modifier:modifierValue}); }
   }
   let winner='tie';
   if (hostWins>=2) winner='host';
@@ -1447,7 +1561,10 @@ function onMouseMove(e) {
       if (zi<Math.min(gs.round,3)&&myCards.length<ZONE_CAPACITY) newTarget=zi;
     }
     const ha=el.closest('[data-drop-hand]');
-    if (ha&&md.source.type==='zone') newTarget='hand';
+    if (ha&&md.source.type==='zone') {
+      // Permitir retracción de cartas colocadas esta ronda (sin validaciones adicionales)
+      newTarget='hand';
+    }
     const da=el.closest('[data-drop-discard]');
     if (da&&md.source.type==='hand') {
       const mySwaps=myRole==='host'?gameState.hostSwapsUsed:gameState.guestSwapsUsed;
@@ -1461,10 +1578,21 @@ async function onMouseUp(e) {
   document.removeEventListener('mouseup', onMouseUp);
   document.body.style.userSelect='';
   ghost.style.display='none';
+  
   if (md && dropTarget!==null) {
-    if (typeof dropTarget==='number'&&md.source.type==='hand') await doPlaceCard(md.source.idx,dropTarget);
-    else if (dropTarget==='hand'&&md.source.type==='zone') await doRetractCard(md.source.zoneIdx,md.source.cardIdx);
-    else if (dropTarget==='discard'&&md.source.type==='hand') await doDiscardCard(md.source.idx);
+    console.log('Drop attempt:', {source: md.source.type, target: dropTarget, zoneIdx: md.source.zoneIdx, cardIdx: md.source.cardIdx});
+    if (typeof dropTarget==='number'&&md.source.type==='hand') {
+      console.log('Placing card in zone', dropTarget);
+      await doPlaceCard(md.source.idx,dropTarget);
+    }
+    else if (dropTarget==='hand'&&md.source.type==='zone') {
+      console.log('Retracting card from zone', md.source.zoneIdx, 'cardIdx:', md.source.cardIdx);
+      await doRetractCard(md.source.zoneIdx,md.source.cardIdx);
+    }
+    else if (dropTarget==='discard'&&md.source.type==='hand') {
+      console.log('Discarding card');
+      await doDiscardCard(md.source.idx);
+    }
   }
   md=null; dropTarget=null;
   render();
