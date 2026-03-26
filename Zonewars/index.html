@@ -51,6 +51,28 @@
     min-height: 100vh;
     padding: 24px;
     gap: 16px;
+    position: relative;
+    z-index: 0;
+  }
+
+  #lobbyBg {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* Vignette so el contenido del lobby se lea con claridad */
+  #lobbyScreen::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 20%, rgba(13,13,18,0.68) 100%);
+    pointer-events: none;
+    z-index: -1;
   }
 
   #lobbyScreen h1 {
@@ -312,9 +334,113 @@
   .discard-area.drop-target-discard { border-color: var(--gold); background: rgba(201,168,76,0.1); }
   .discard-area.full { border-color: var(--muted); opacity: 0.5; }
 
-  /* Overlay */
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; }
-  .overlay-box { background: var(--surface); border: 1px solid var(--gold); border-radius: 12px; padding: 32px 40px; text-align: center; max-width: 420px; }
+  /* ── END GAME OVERLAY — minimizable ── */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    cursor: zoom-out; /* hint that clicking outside closes */
+    /* transition for backdrop fade-out on minimize */
+    transition: background 0.35s ease, backdrop-filter 0.35s ease;
+  }
+  .overlay.minimizing {
+    background: rgba(0,0,0,0);
+    pointer-events: none;
+  }
+  .overlay.minimized {
+    display: none;
+  }
+
+  .overlay-box {
+    background: var(--surface);
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    padding: 32px 40px;
+    text-align: center;
+    max-width: 420px;
+    width: 90%;
+    position: relative;
+    cursor: default; /* reset cursor inside the box */
+    /* transform origin at bottom-right corner to animate toward the FAB */
+    transform-origin: bottom right;
+    transition:
+      transform 0.42s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+      border-radius 0.42s ease;
+  }
+
+  /* State: visible (default) */
+  .overlay-box.is-open {
+    transform: scale(1) translate(0, 0);
+    opacity: 1;
+    border-radius: 12px;
+  }
+
+  /* State: animating toward FAB (shrinking) */
+  .overlay-box.is-minimizing {
+    transform: scale(0.05) translate(calc(50vw - 44px), calc(50vh - 24px));
+    opacity: 0;
+    border-radius: 50%;
+  }
+
+  /* State: animating from FAB (expanding) */
+  .overlay-box.is-maximizing {
+    animation: expandFromFab 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  @keyframes expandFromFab {
+    0%   { transform: scale(0.05) translate(calc(50vw - 44px), calc(50vh - 24px)); opacity: 0; border-radius: 50%; }
+    60%  { opacity: 1; }
+    100% { transform: scale(1) translate(0,0); opacity: 1; border-radius: 12px; }
+  }
+
+
+
+  /* FAB — restore button (same style as rules/efx buttons) */
+  #endGameRestoreBtn {
+    position: fixed;
+    bottom: 140px; /* stacks above efxBtn (20px) and rulesBtn (80px) */
+    right: 20px;
+    width: 48px;
+    height: 48px;
+    background: var(--surface);
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    cursor: pointer;
+    display: none; /* shown only when overlay is minimized */
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    z-index: 40;
+    box-shadow: 0 2px 16px rgba(201,168,76,0.35);
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    animation: fabPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  #endGameRestoreBtn:hover {
+    border-color: var(--gold2);
+    box-shadow: 0 2px 24px rgba(201,168,76,0.55);
+    transform: scale(1.08);
+  }
+  @keyframes fabPop {
+    0%   { transform: scale(0); opacity: 0; }
+    70%  { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Pulsing glow on the FAB to draw attention */
+  @keyframes fabGlow {
+    0%, 100% { box-shadow: 0 2px 16px rgba(201,168,76,0.35); }
+    50%       { box-shadow: 0 2px 28px rgba(201,168,76,0.7); }
+  }
+  #endGameRestoreBtn.is-visible {
+    display: flex;
+    animation: fabPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+               fabGlow 2s 0.5s ease-in-out infinite;
+  }
+
   .overlay-box h2 { color: var(--gold); font-size: 1.8rem; margin-bottom: 12px; letter-spacing: 3px; }
   .overlay-box p { color: var(--muted); margin-bottom: 20px; font-size: 1.1rem; line-height: 1.6; }
   .scores-breakdown { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; text-align: center; }
@@ -352,6 +478,9 @@
 
 <!-- ── LOBBY ─────────────────────────────────────────────────────── -->
 <div id="lobbyScreen">
+  <!-- Background canvas cargado desde fichero externo -->
+  <iframe id="lobbyBg" src="poker-background.html?v=2" tabindex="-1" aria-hidden="true"></iframe>
+
   <h1>⚔ ZONE WARS ⚔</h1>
 
   <div class="lobby-box" id="lobbyCreate">
@@ -406,8 +535,8 @@
 </main>
 
 <!-- End Game Overlay -->
-<div class="overlay" id="endOverlay" style="display:none;">
-  <div class="overlay-box">
+<div class="overlay" id="endOverlay" style="display:none;" onclick="handleOverlayClick(event)">
+  <div class="overlay-box is-open" id="endOverlayBox">
     <h2 id="endTitle">—</h2>
     <div class="scores-breakdown" id="endScores"></div>
     <p id="endMsg"></p>
@@ -418,6 +547,9 @@
     <div id="rematchStatus" style="margin-top:12px; font-size:0.8rem; color:var(--muted); font-family:'Cinzel',serif; letter-spacing:1px; min-height:1.2em;"></div>
   </div>
 </div>
+
+<!-- FAB: Restore end-game overlay (same family as rules/efx buttons) -->
+<button id="endGameRestoreBtn" onclick="maximizeEndOverlay()" title="Ver resultado de la partida">🏆</button>
 
 <!-- Round Banner -->
 <div id="roundBanner" style="display:none;">
@@ -495,15 +627,9 @@ const MAX_SWAPS = 2;
 // ⚙️  ZONE MODIFIERS 
 // ═══════════════════════════════════════════════════════════════════
 
-// Probability (0–1) that a zone gets a modifier at all when it unlocks.
-// 1.0 = always, 0.0 = never, 0.65 = 65% chance
 const MODIFIER_SPAWN_CHANCE = 0.65;
 
-// Individual modifier weights — higher = appears more often.
-// Set to 0 to disable a modifier entirely.
-// Total weight doesn't need to sum to anything specific.
 const MODIFIER_POOL = [
-  // ── NUMBER MODIFIERS ────────────────────────────────────────────
   { id: 'EVEN_DOUBLE',   weight: 10, icon: '⚡', label: 'Pares x2',
     desc: 'Las cartas de valor par suman el doble' },
   { id: 'ODD_DOUBLE',    weight: 10, icon: '🔮', label: 'Impares x2',
@@ -514,16 +640,12 @@ const MODIFIER_POOL = [
     desc: 'Cada As otorga +12 pts adicionales' },
   { id: 'HIGH_CARD_DBL', weight: 7,  icon: '🏆', label: 'Carta Alta x2',
     desc: 'La carta más alta de tu mano vale el doble' },
-
-  // ── SUIT MODIFIERS ───────────────────────────────────────────────
   { id: 'RED_POWER',     weight: 9,  icon: '❤️',  label: 'Poder Rojo',
     desc: '♥ y ♦ otorgan +3 pts cada una' },
   { id: 'BLACK_POWER',   weight: 9,  icon: '♠️',  label: 'Poder Negro',
     desc: '♠ y ♣ otorgan +3 pts cada una' },
   { id: 'FLUSH_BOOST',   weight: 5,  icon: '🌊', label: 'Flush Boost',
     desc: 'Si hay color (flush) → +15 pts extra' },
-
-  // ── COMBO MODIFIERS ──────────────────────────────────────────────
   { id: 'ROYALS_BONUS',  weight: 8,  icon: '🎭', label: 'Corte Real',
     desc: 'Cada J, Q o K otorga +5 pts adicionales' },
   { id: 'TRIO_MASTER',   weight: 6,  icon: '🎯', label: 'Maestro del Trío',
@@ -532,15 +654,12 @@ const MODIFIER_POOL = [
     desc: 'Si hay full house → +25 pts extra sobre el combo' },
   { id: 'COMBO_FEVER',   weight: 5,  icon: '💥', label: 'Combo Fever',
     desc: 'El valor del combo se multiplica x2' },
-
-  // ── TACTICAL MODIFIERS ──────────────────────────────────────────
   { id: 'CROWDED',       weight: 7,  icon: '⚔️',  label: 'Zona Saturada',
     desc: 'Si juegas el máximo de cartas propias (4) → +12 pts' },
   { id: 'MINIMAL',       weight: 5,  icon: '🎪', label: 'Estrategia Mínima',
     desc: 'Si juegas 2 o menos cartas propias → +20 pts' },
 ];
 
-// Pick a random modifier using weighted probability (no repeats across zones)
 function pickModifier(exclude = []) {
   const available = MODIFIER_POOL.filter(m => m.weight > 0 && !exclude.includes(m.id));
   if (!available.length) return null;
@@ -553,7 +672,6 @@ function pickModifier(exclude = []) {
   return available[available.length - 1].id;
 }
 
-// Calculate the ZE (Zone Effect) score for a set of cards given a modifier
 function calcZEScore(modifierId, communityCards, extraCards) {
   if (!modifierId) return 0;
   const all = [...communityCards, ...extraCards];
@@ -562,7 +680,6 @@ function calcZEScore(modifierId, communityCards, extraCards) {
 
   switch (modifierId) {
     case 'EVEN_DOUBLE':
-      // Even-value cards add their value again (effectively doubling their sum contribution)
       all.forEach(c => { if (cardNum(c) % 2 === 0) ze += cardNum(c); });
       break;
     case 'ODD_DOUBLE':
@@ -576,7 +693,7 @@ function calcZEScore(modifierId, communityCards, extraCards) {
       break;
     case 'HIGH_CARD_DBL': {
       const maxVal = Math.max(...all.map(cardNum));
-      ze += maxVal; // adds maxVal once more (doubling its contribution)
+      ze += maxVal;
       break;
     }
     case 'RED_POWER':
@@ -605,7 +722,7 @@ function calcZEScore(modifierId, communityCards, extraCards) {
     }
     case 'COMBO_FEVER': {
       const combo = bestCombo(all);
-      ze += combo.pts; // adds combo pts again (x2 total)
+      ze += combo.pts;
       break;
     }
     case 'CROWDED':
@@ -618,14 +735,12 @@ function calcZEScore(modifierId, communityCards, extraCards) {
   return ze;
 }
 
-// Total score including ZE
 function totalScoreWithZE(communityCards, extraCards, modifierId) {
   const base = totalScore(communityCards, extraCards);
   const ze   = calcZEScore(modifierId, communityCards, extraCards);
   return { base, ze, total: base + ze };
 }
 
-// Helper to get modifier definition by id
 function getModDef(id) { return MODIFIER_POOL.find(m => m.id === id) || null; }
 const TOTAL_ROUNDS = 4;
 const ZONE_CAPACITY = 4;
@@ -674,20 +789,85 @@ function totalScore(comm,extra) { const all=[...comm,...extra]; if(!all.length)r
 // ═══════════════════════════════════════════════════════════════════
 // MULTIPLAYER STATE
 // ═══════════════════════════════════════════════════════════════════
-let myRole = null;         // 'host' | 'guest'
+let myRole = null;
 let roomId  = null;
 let roomRef = null;
-let gameState = null;      // local mirror of Firebase state
+let gameState = null;
 
-// Local UI state (not synced)
 let thisRoundPlaced = [];
-let newlyDealtCount = 0; // how many cards at the END of hand are "new" (animate them)
-let dealAnimUntil = 0;   // timestamp — render adds deal classes while Date.now() < dealAnimUntil
+let newlyDealtCount = 0;
+let dealAnimUntil = 0;
 let revealingEnemyCards = false;
 let revealedEnemyCardIds = new Set();
-let revealedModifiers  = new Set(); // zones whose modifier badge animation has already played
-let animatingModifiers = new Set(); // zones currently mid-animation (brief window)
+let revealedModifiers  = new Set();
+let animatingModifiers = new Set();
 let md = null, dropTarget = null;
+
+// ── END OVERLAY MINIMIZE STATE ───────────────────────────────────
+let endOverlayMinimized = false;
+
+function minimizeEndOverlay() {
+  if (endOverlayMinimized) return;
+  const overlay = document.getElementById('endOverlay');
+  const box     = document.getElementById('endOverlayBox');
+  const fab     = document.getElementById('endGameRestoreBtn');
+
+  // 1. Trigger box shrink animation
+  box.classList.remove('is-open', 'is-maximizing');
+  box.classList.add('is-minimizing');
+
+  // 2. Fade out backdrop simultaneously
+  overlay.classList.add('minimizing');
+
+  // 3. After animation completes, hide overlay and show FAB
+  setTimeout(() => {
+    overlay.classList.add('minimized');
+    overlay.classList.remove('minimizing');
+    overlay.style.display = 'none';
+    box.classList.remove('is-minimizing');
+
+    // Show FAB with pop animation
+    fab.classList.add('is-visible');
+    endOverlayMinimized = true;
+  }, 380);
+}
+
+function maximizeEndOverlay() {
+  if (!endOverlayMinimized) return;
+  const overlay = document.getElementById('endOverlay');
+  const box     = document.getElementById('endOverlayBox');
+  const fab     = document.getElementById('endGameRestoreBtn');
+
+  // 1. Hide FAB
+  fab.classList.remove('is-visible');
+  fab.style.display = 'none';
+  // Re-enable display flex after a tick so the animation re-triggers next time
+  setTimeout(() => { fab.style.display = ''; }, 50);
+
+  // 2. Show overlay
+  overlay.style.display = 'flex';
+  overlay.classList.remove('minimized', 'minimizing');
+
+  // 3. Trigger expand animation on box
+  box.classList.remove('is-minimizing', 'is-open');
+  // Force reflow so animation restarts
+  void box.offsetWidth;
+  box.classList.add('is-maximizing');
+
+  // 4. After animation, settle to open state
+  setTimeout(() => {
+    box.classList.remove('is-maximizing');
+    box.classList.add('is-open');
+    endOverlayMinimized = false;
+  }, 430);
+}
+
+function handleOverlayClick(e) {
+  // Only minimize if clicking the backdrop itself, not the box content
+  if (e.target === document.getElementById('endOverlay')) {
+    minimizeEndOverlay();
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // LOBBY
@@ -700,7 +880,6 @@ function genCode() {
 }
 
 async function createRoom() {
-  // Clean up any stale rooms older than 2 hours
   try {
     const staleSnap = await db.ref('rooms').orderByChild('createdAt')
       .endAt(Date.now() - 2 * 60 * 60 * 1000).once('value');
@@ -725,10 +904,8 @@ async function createRoom() {
   document.getElementById('lobbyWaiting').style.flexDirection = 'column';
   document.getElementById('roomCodeDisplay').textContent = code;
 
-  // Clean up room when window closes
-  roomRef.onDisconnect().remove(); // Remove whole room if host disconnects
+  roomRef.onDisconnect().remove();
 
-  // Listen for guest joining
   roomRef.child('guest/connected').on('value', snap => {
     if (snap.val() === true) {
       document.getElementById('waitingText').textContent = '¡Rival conectado! Iniciando...';
@@ -753,7 +930,6 @@ async function joinRoom() {
 
   await roomRef.child('guest').set({ connected: true });
   roomRef.child('guest/connected').onDisconnect().set(false);
-  // Also flag disconnection so host can clean up
   roomRef.child('guestDisconnected').onDisconnect().set(true);
 
   startOnlineGame();
@@ -763,11 +939,18 @@ function leaveRoom() {
   if (roomRef) {
     if (myRole === 'host') roomRef.remove();
     else if (myRole === 'guest') roomRef.child('guest/connected').set(false);
-    roomRef.off(); // removes ALL listeners including rematch
+    roomRef.off();
     roomRef = null;
   }
   roomId = null; myRole = null; gameState = null;
   thisRoundPlaced = []; revealedEnemyCardIds = new Set(); newlyDealtCount = 0; dealAnimUntil = 0; revealedModifiers = new Set(); animatingModifiers = new Set();
+  endOverlayMinimized = false;
+
+  // Reset FAB and overlay states
+  const fab = document.getElementById('endGameRestoreBtn');
+  fab.classList.remove('is-visible');
+  fab.style.display = '';
+
   document.getElementById('gameScreen').style.display = 'none';
   document.getElementById('lobbyScreen').style.display = 'flex';
   document.getElementById('lobbyCreate').style.display = 'flex';
@@ -775,6 +958,7 @@ function leaveRoom() {
   document.getElementById('lobbyWaiting').style.display = 'none';
   document.getElementById('joinCodeInput').value = '';
   document.getElementById('endOverlay').style.display = 'none';
+  document.getElementById('endOverlayBox').className = 'overlay-box is-open';
 }
 
 function copyCode() {
@@ -797,11 +981,10 @@ function buildInitialState() {
     communityCards: [draw(), draw()],
     hostCards: [],
     guestCards: [],
-    modifier: null,      // assigned when zone unlocks (null = no effect)
+    modifier: null,
     modifierRevealed: false,
   }));
 
-  // Zone 0 unlocks immediately on round 1 — assign its modifier now
   const usedMods = [];
   if (Math.random() < MODIFIER_SPAWN_CHANCE) {
     zones[0].modifier = pickModifier(usedMods);
@@ -815,7 +998,7 @@ function buildInitialState() {
 
   return {
     round: 1,
-    phase: 'playing',       // 'playing' | 'host_ready' | 'guest_ready' | 'revealing' | 'done'
+    phase: 'playing',
     cardsToPlayThisRound: 2,
     hostCardsPlayed: 0,
     guestCardsPlayed: 0,
@@ -829,7 +1012,7 @@ function buildInitialState() {
     deck: remaining,
     hostPlacedThisRound: [],
     guestPlacedThisRound: [],
-    revealedHostCardIdx: [],   // indices into hostPlacedThisRound revealed to guest
+    revealedHostCardIdx: [],
     revealedGuestCardIdx: [],
     winner: null,
   };
@@ -844,13 +1027,10 @@ function startOnlineGame() {
   thisRoundPlaced = [];
   revealedEnemyCardIds = new Set();
 
-  // Listen to state changes
   roomRef.child('state').on('value', snap => {
     const prev = gameState;
-    const prevState = gameState;
     gameState = snap.val();
     if (!gameState) {
-      // Room was deleted (host disconnected)
       if (myRole === 'guest') {
         alert('El anfitrión se ha desconectado. Volviendo al lobby.');
         leaveRoom();
@@ -860,18 +1040,17 @@ function startOnlineGame() {
     onStateChange(prev, gameState);
   });
 
-  // Listen to rematch node
   roomRef.child('rematch').on('value', snap => {
     const r = snap.val() || {};
     const rivalRole = myRole === 'host' ? 'guest' : 'host';
     const rivalWantsRematch = !!r[rivalRole];
     const iWantRematch = !!r[myRole];
 
-    // Update UI if we're on the end screen
     const endOverlay = document.getElementById('endOverlay');
-    if (endOverlay.style.display !== 'none') {
-      const statusEl = document.getElementById('rematchStatus');
-      const btn = document.getElementById('rematchBtn');
+    // Show rematch status even if minimized
+    const statusEl = document.getElementById('rematchStatus');
+    const btn = document.getElementById('rematchBtn');
+    if (!endOverlayMinimized && endOverlay.style.display !== 'none') {
       if (rivalWantsRematch && !iWantRematch) {
         statusEl.textContent = '¡El rival quiere revancha!';
         statusEl.style.color = 'var(--gold2)';
@@ -879,36 +1058,30 @@ function startOnlineGame() {
         statusEl.textContent = 'Esperando al rival...';
         statusEl.style.color = 'var(--muted)';
       }
-      if (r.host && r.guest) {
-        statusEl.textContent = '¡Revancha aceptada! Iniciando...';
-        checkRematch();
-      }
+    }
+    if (r.host && r.guest) {
+      statusEl.textContent = '¡Revancha aceptada! Iniciando...';
+      checkRematch();
     }
   });
 }
 
 function onStateChange(prev, gs) {
-  // If guest disconnected and we're the host, clean up the room
   if (myRole === 'host' && gs.guestDisconnected) {
     alert('El rival se ha desconectado. La sala se cerrará.');
     leaveRoom();
     return;
   }
-  // If host disconnects the whole room disappears — guest gets null state
 
-  // Detect newly revealed zone modifiers (works for both host and guest)
   if (prev) {
     for (let zi = 0; zi < 3; zi++) {
       const wasRevealed = prev.zones && prev.zones[zi] && prev.zones[zi].modifierRevealed;
       const nowRevealed = gs.zones && gs.zones[zi] && gs.zones[zi].modifierRevealed;
       if (!wasRevealed && nowRevealed) {
-        // Zone zi just got its modifier revealed — trigger animation after banner
-        // Use a short delay so the banner plays first
         setTimeout(() => triggerModifierAnimation(zi), 1800);
       }
     }
   } else {
-    // First snapshot (prev=null) — trigger animation for any already-revealed zones
     for (let zi = 0; zi < 3; zi++) {
       if (gs.zones && gs.zones[zi] && gs.zones[zi].modifierRevealed) {
         setTimeout(() => triggerModifierAnimation(zi), 400);
@@ -920,58 +1093,50 @@ function onStateChange(prev, gs) {
   const nowRevealing = gs.phase === 'revealing';
 
   if (!wasRevealing && nowRevealing) {
-    console.log('Starting reveal animation');
-    // Start reveal animation
     revealingEnemyCards = true;
     render();
     const enemyPlaced = myRole === 'host' ? gs.guestPlacedThisRound : gs.hostPlacedThisRound;
     const totalCards = (enemyPlaced || []).length;
-    // Calculate duration based on number of cards
     const duration = totalCards > 0 ? (totalCards - 1) * 150 + 600 : 400;
-    console.log('Reveal duration:', duration, 'ms for', totalCards, 'cards');
     
     setTimeout(() => {
-      console.log('Reveal animation complete, marking cards as revealed');
       revealingEnemyCards = false;
-      // Mark all as revealed
       (enemyPlaced || []).forEach(p => revealedEnemyCardIds.add(p.cardKey));
       render();
       
-      // Host advances round
       if (myRole === 'host') {
-        console.log('Host advancing round');
         advanceRoundOrEnd(gs);
       }
     }, duration);
   } else if (gs.phase === 'done') {
-    console.log('Game is done');
     render();
     showEndGame(gs);
   } else if (prev && prev.phase === 'done' && gs.phase === 'playing') {
-    // Rematch accepted — new game starting
-    console.log('Rematch starting');
+    // Rematch — reset overlay state
     document.getElementById('endOverlay').style.display = 'none';
+    document.getElementById('endOverlayBox').className = 'overlay-box is-open';
+    endOverlayMinimized = false;
+    const fab = document.getElementById('endGameRestoreBtn');
+    fab.classList.remove('is-visible');
+    fab.style.display = '';
+
     thisRoundPlaced = [];
     revealedEnemyCardIds = new Set();
     newlyDealtCount = 0;
     dealAnimUntil = 0;
     revealedModifiers = new Set(); animatingModifiers = new Set();
     render();
-    // Re-trigger zone 0 animation for rematch
     for (let zi = 0; zi < 3; zi++) {
       if (gameState && gameState.zones && gameState.zones[zi] && gameState.zones[zi].modifierRevealed) {
         setTimeout(() => triggerModifierAnimation(zi), 400 + zi * 200);
       }
     }
   } else {
-    // Reset local placed tracking on new round
     if (prev && prev.round !== gs.round) {
-      console.log('New round detected:', gs.round);
       thisRoundPlaced = [];
       revealedEnemyCardIds = new Set();
       const label = gs.round === TOTAL_ROUNDS ? 'RONDA FINAL' : `RONDA ${gs.round}`;
       showRoundBanner(label, () => {
-        // Mark the last 2 cards as "newly dealt" for 800ms — survives Firebase re-renders
         if (gs.round < TOTAL_ROUNDS) {
           newlyDealtCount = 2;
           dealAnimUntil = Date.now() + 800;
@@ -988,57 +1153,23 @@ function onStateChange(prev, gs) {
 // ACTIONS — write to Firebase
 // ═══════════════════════════════════════════════════════════════════
 async function doPlaceCard(handIdx, zoneIdx) {
-  const gs = gameState; // IMPORTANTE: usar gameState actual
-  
-  if (!gs) {
-    console.error('gameState is null');
-    return false;
-  }
-
+  const gs = gameState;
+  if (!gs) { console.error('gameState is null'); return false; }
   const myHand = myRole === 'host' ? (gs.hostHand || []) : (gs.guestHand || []);
-  
-  if (!Array.isArray(myHand) || myHand.length === 0) {
-    console.error('Invalid hand:', myHand);
-    return false;
-  }
-
-  if (handIdx < 0 || handIdx >= myHand.length) {
-    console.error('Invalid hand index:', handIdx, 'hand length:', myHand.length);
-    return false;
-  }
-
+  if (!Array.isArray(myHand) || myHand.length === 0) { console.error('Invalid hand:', myHand); return false; }
+  if (handIdx < 0 || handIdx >= myHand.length) { console.error('Invalid hand index:', handIdx); return false; }
   const myZoneCards = myRole === 'host' ? (gs.zones[zoneIdx].hostCards || []) : (gs.zones[zoneIdx].guestCards || []);
   const myPlayed = myRole === 'host' ? gs.hostCardsPlayed : gs.guestCardsPlayed;
+  if (myZoneCards.length >= ZONE_CAPACITY) { console.error('Zone at capacity'); return false; }
+  if (zoneIdx >= Math.min(gs.round, 3)) { console.error('Zone not unlocked yet'); return false; }
+  if (myPlayed >= gs.cardsToPlayThisRound) { console.error('Already played all cards'); return false; }
+  if (gs.phase !== 'playing') { console.error('Not in playing phase'); return false; }
 
-  if (myZoneCards.length >= ZONE_CAPACITY) {
-    console.error('Zone at capacity');
-    return false;
-  }
-  if (zoneIdx >= Math.min(gs.round, 3)) {
-    console.error('Zone not unlocked yet:', zoneIdx, 'vs', Math.min(gs.round, 3));
-    return false;
-  }
-  if (myPlayed >= gs.cardsToPlayThisRound) {
-    console.error('Already played all cards for this round:', myPlayed, 'vs', gs.cardsToPlayThisRound);
-    return false;
-  }
-  if (gs.phase !== 'playing') {
-    console.error('Not in playing phase, phase is:', gs.phase);
-    return false;
-  }
-
-  // Crear copia de mano y zona para modificar
   const newMyHand = [...myHand];
   const card = newMyHand.splice(handIdx, 1)[0];
-  
-  if (!card) {
-    console.error('Card not found at hand index', handIdx);
-    return false;
-  }
+  if (!card) { console.error('Card not found'); return false; }
 
   const newMyZoneCards = [...myZoneCards, card];
-
-  // Unique key to track this placement for reveal animation
   const cardKey = `${gs.round}_${myRole}_${Date.now()}_${Math.random()}`;
   card._key = cardKey;
 
@@ -1059,54 +1190,31 @@ async function doPlaceCard(handIdx, zoneIdx) {
     update['guestPlacedThisRound'] = myPlacedList;
   }
 
-  console.log('Placing card:', card.val, card.suit, 'in zone', zoneIdx, 'new hand length:', newMyHand.length);
   thisRoundPlaced.push({ card, zoneIdx, handIdx: newMyHand.length });
   await roomRef.child('state').update(update);
   return true;
 }
 
 async function doRetractCard(zoneIdx, cardIdx) {
-  const gs = gameState; // IMPORTANTE: usar gameState actual, no el parámetro antiguo
-  
-  if (!gs) {
-    console.error('gameState is null');
-    return false;
-  }
-
+  const gs = gameState;
+  if (!gs) { console.error('gameState is null'); return false; }
   const myZoneCards = myRole === 'host' ? (gs.zones[zoneIdx].hostCards || []) : (gs.zones[zoneIdx].guestCards || []);
   const card = myZoneCards[cardIdx];
-  
-  if (!card) {
-    console.error('Card not found at zone', zoneIdx, 'cardIdx', cardIdx);
-    return false;
-  }
+  if (!card) { console.error('Card not found'); return false; }
 
-  // Check it was placed this round by matching the exact object or by suit+val
   const myPlacedList = myRole === 'host' ? (gs.hostPlacedThisRound || []) : (gs.guestPlacedThisRound || []);
   const pIdx = myPlacedList.findIndex(p => 
-    p.zoneIdx === zoneIdx && 
-    p.card.val === card.val && 
-    p.card.suit === card.suit
+    p.zoneIdx === zoneIdx && p.card.val === card.val && p.card.suit === card.suit
   );
-  
-  if (pIdx === -1) {
-    console.error('Card not found in placed list for this round. Placed cards:', myPlacedList);
-    return false;
-  }
+  if (pIdx === -1) { console.error('Card not found in placed list'); return false; }
 
-  console.log('Retracting card:', card.val, card.suit, 'from zone', zoneIdx);
-
-  // Crear copias limpias para modificar
   const newMyZoneCards = [...myZoneCards];
   newMyZoneCards.splice(cardIdx, 1);
-  
   const newMyPlacedList = [...myPlacedList];
   newMyPlacedList.splice(pIdx, 1);
-  
   const myHand = myRole === 'host' 
     ? [...(gs.hostHand || []), card] 
     : [...(gs.guestHand || []), card];
-  
   const myPlayed = myRole === 'host' ? gs.hostCardsPlayed - 1 : gs.guestCardsPlayed - 1;
 
   const update = {};
@@ -1124,60 +1232,33 @@ async function doRetractCard(zoneIdx, cardIdx) {
     update['guestReady'] = false;
   }
 
-  // Update local tracking too
   const li = thisRoundPlaced.findIndex(p => p.zoneIdx===zoneIdx && p.card.val===card.val && p.card.suit===card.suit);
   if (li !== -1) thisRoundPlaced.splice(li, 1);
 
-  console.log('Retract successful, new hand length:', myHand.length);
   await roomRef.child('state').update(update);
   return true;
 }
 
 async function doDiscardCard(handIdx) {
-  const gs = gameState; // IMPORTANTE: usar gameState actual
-  
-  if (!gs) {
-    console.error('gameState is null');
-    return false;
-  }
-
+  const gs = gameState;
+  if (!gs) { console.error('gameState is null'); return false; }
   const mySwaps = myRole === 'host' ? gs.hostSwapsUsed : gs.guestSwapsUsed;
-  if (mySwaps >= MAX_SWAPS) {
-    console.error('Already used all swaps');
-    return false;
-  }
+  if (mySwaps >= MAX_SWAPS) { console.error('Already used all swaps'); return false; }
 
   const myHand = myRole === 'host' ? [...(gs.hostHand || [])] : [...(gs.guestHand || [])];
   const deck = [...(gs.deck || [])];
-  
-  if (handIdx < 0 || handIdx >= myHand.length) {
-    console.error('Invalid hand index:', handIdx);
-    return false;
-  }
+  if (handIdx < 0 || handIdx >= myHand.length) { console.error('Invalid hand index'); return false; }
 
   myHand.splice(handIdx, 1);
   const drawn = deck.shift();
-  
-  if (!drawn) {
-    console.error('No cards left in deck');
-    return false;
-  }
-
+  if (!drawn) { console.error('No cards left in deck'); return false; }
   myHand.push(drawn);
 
   const update = { deck };
-  if (myRole === 'host') { 
-    update['hostHand'] = myHand; 
-    update['hostSwapsUsed'] = mySwaps + 1; 
-  } else { 
-    update['guestHand'] = myHand; 
-    update['guestSwapsUsed'] = mySwaps + 1; 
-  }
+  if (myRole === 'host') { update['hostHand'] = myHand; update['hostSwapsUsed'] = mySwaps + 1; }
+  else { update['guestHand'] = myHand; update['guestSwapsUsed'] = mySwaps + 1; }
 
-  console.log('Discarding card at index', handIdx, ', new swap count:', mySwaps + 1);
   await roomRef.child('state').update(update);
-  
-  // Animate the new card (last in hand after discard)
   newlyDealtCount = 1;
   dealAnimUntil = Date.now() + 800;
   return true;
@@ -1199,22 +1280,17 @@ async function endRound() {
   const update = myRole === 'host' ? { hostReady: true } : { guestReady: true };
   await roomRef.child('state').update(update);
 
-  // Check if both are ready → trigger reveal
   const newHostReady = myRole === 'host' ? true : gs.hostReady;
   const newGuestReady = myRole === 'guest' ? true : gs.guestReady;
   if (newHostReady && newGuestReady) {
     await roomRef.child('state').update({ phase: 'revealing' });
   }
-
   render();
 }
 
-// Host-only: advance to next round or end game
 async function advanceRoundOrEnd(gs) {
   if (gs.round >= TOTAL_ROUNDS) {
-    console.log('Game over - round', gs.round, '>=', TOTAL_ROUNDS);
     const result = computeEndGame(gs);
-    console.log('End game result:', result);
     await roomRef.child('state').update({ phase: 'done', winner: result.winner, endData: result });
   } else {
     const nextRound = gs.round + 1;
@@ -1223,19 +1299,12 @@ async function advanceRoundOrEnd(gs) {
     const hostHand = [...gs.hostHand];
     const guestHand = [...gs.guestHand];
 
-    console.log('Advancing to round', nextRound, 'cardsToPlay:', cardsToPlay);
-
-    // Solo repartir cartas si no es la última ronda
     if (nextRound < TOTAL_ROUNDS) {
-      console.log('Dealing', cardsToPlay, 'cards to each player');
       for (let i=0; i<cardsToPlay; i++) { if(deck.length) hostHand.push(deck.shift()); }
       for (let i=0; i<cardsToPlay; i++) { if(deck.length) guestHand.push(deck.shift()); }
-    } else {
-      console.log('Last round - no new cards to deal');
     }
 
-    // Assign modifier to the newly unlocked zone (zone index = nextRound - 1, max zone 2)
-    const newZoneIdx = nextRound - 1; // round 2 unlocks zone 1, round 3 unlocks zone 2
+    const newZoneIdx = nextRound - 1;
     const zoneUpdates = {};
     if (newZoneIdx <= 2 && nextRound <= 3) {
       const usedMods = gs.zones.map(z => z.modifier).filter(Boolean);
@@ -1245,7 +1314,6 @@ async function advanceRoundOrEnd(gs) {
       }
       zoneUpdates[`zones/${newZoneIdx}/modifier`] = newMod;
       zoneUpdates[`zones/${newZoneIdx}/modifierRevealed`] = true;
-      console.log('Zone', newZoneIdx, 'modifier:', newMod);
     }
 
     await roomRef.child('state').update({
@@ -1277,7 +1345,6 @@ function computeEndGame(gs) {
     const gR = totalScoreWithZE(z.communityCards, z.guestCards||[], z.modifier);
     const hS = hR.total, gS = gR.total;
     hostTotal+=hS; guestTotal+=gS;
-    // Usar null en lugar de undefined para Firebase
     const modifierValue = z.modifier || null;
     if (hS>gS) { hostWins++; breakdown.push({zone:i,winner:'host',hS,gS,modifier:modifierValue}); }
     else if (gS>hS) { guestWins++; breakdown.push({zone:i,winner:'guest',hS,gS,modifier:modifierValue}); }
@@ -1373,14 +1440,12 @@ function renderZones() {
     const pCombo = bestCombo([...z.communityCards,...mine]);
     const eCombo = bestCombo([...z.communityCards,...opp]);
     const modDef  = z.modifier ? getModDef(z.modifier) : null;
-    // Animation is managed in onStateChange/startOnlineGame — renderZones just reads the flag
     const modIsNew = animatingModifiers.has(i);
 
     const commHtml = locked
       ? `<div class="playing-card face-down"></div><div class="playing-card face-down"></div>`
       : z.communityCards.map(c=>cardHtml(c,false,false,'small')).join('');
 
-    // Opponent cards
     let oppHtml = '';
     const newlyRevealed = newlyRevealedByZone[i]||[];
     const revealedKeys = new Set(
@@ -1391,7 +1456,7 @@ function renderZones() {
       const matchMove = enemyPlacedThisRound.find(p=>p.zoneIdx===i&&p.card.val===c.val&&p.card.suit===c.suit);
       const isNew = revealingEnemyCards && matchMove && newlyRevealed.some(n=>n.card.val===c.val&&n.card.suit===c.suit);
       const isRevealed = matchMove && revealedEnemyCardIds.has(matchMove.cardKey);
-      const isPrevRound = !matchMove; // placed in a previous round → already visible
+      const isPrevRound = !matchMove;
 
       if (isNew) {
         const nr = newlyRevealed.find(n=>n.card.val===c.val&&n.card.suit===c.suit);
@@ -1404,7 +1469,6 @@ function renderZones() {
       }
     }
 
-    // My cards
     const myReady = myRole==='host' ? gs.hostReady : gs.guestReady;
     const myCardsHtml = mine.map((c,ci)=>{
       const color = SUIT_COLOR[c.suit];
@@ -1416,7 +1480,6 @@ function renderZones() {
         <div class="card-val">${c.val}</div><div class="card-suit">${c.suit}</div></div>`;
     }).join('');
 
-    // Build modifier badge HTML
     let modHtml = '';
     if (!locked) {
       if (modDef) {
@@ -1557,14 +1620,10 @@ function onMouseMove(e) {
       const zi=parseInt(za.dataset.dropZone);
       const gs=gameState;
       const myCards = myRole==='host'?(gs.zones[zi].hostCards||[]):(gs.zones[zi].guestCards||[]);
-      const mySwaps = myRole==='host'?gs.hostSwapsUsed:gs.guestSwapsUsed;
       if (zi<Math.min(gs.round,3)&&myCards.length<ZONE_CAPACITY) newTarget=zi;
     }
     const ha=el.closest('[data-drop-hand]');
-    if (ha&&md.source.type==='zone') {
-      // Permitir retracción de cartas colocadas esta ronda (sin validaciones adicionales)
-      newTarget='hand';
-    }
+    if (ha&&md.source.type==='zone') { newTarget='hand'; }
     const da=el.closest('[data-drop-discard]');
     if (da&&md.source.type==='hand') {
       const mySwaps=myRole==='host'?gameState.hostSwapsUsed:gameState.guestSwapsUsed;
@@ -1580,17 +1639,11 @@ async function onMouseUp(e) {
   ghost.style.display='none';
   
   if (md && dropTarget!==null) {
-    console.log('Drop attempt:', {source: md.source.type, target: dropTarget, zoneIdx: md.source.zoneIdx, cardIdx: md.source.cardIdx});
     if (typeof dropTarget==='number'&&md.source.type==='hand') {
-      console.log('Placing card in zone', dropTarget);
       await doPlaceCard(md.source.idx,dropTarget);
-    }
-    else if (dropTarget==='hand'&&md.source.type==='zone') {
-      console.log('Retracting card from zone', md.source.zoneIdx, 'cardIdx:', md.source.cardIdx);
+    } else if (dropTarget==='hand'&&md.source.type==='zone') {
       await doRetractCard(md.source.zoneIdx,md.source.cardIdx);
-    }
-    else if (dropTarget==='discard'&&md.source.type==='hand') {
-      console.log('Discarding card');
+    } else if (dropTarget==='discard'&&md.source.type==='hand') {
       await doDiscardCard(md.source.idx);
     }
   }
@@ -1622,8 +1675,17 @@ function showEndGame(gs) {
       <div class="winner-tag" style="color:${wColor}">${wLabel}</div></div>`;
   }
   document.getElementById('endScores').innerHTML = scHtml;
+
+  // Reset overlay state before showing
+  endOverlayMinimized = false;
+  const box = document.getElementById('endOverlayBox');
+  box.classList.remove('is-minimizing', 'is-maximizing');
+  box.classList.add('is-open');
+  const fab = document.getElementById('endGameRestoreBtn');
+  fab.classList.remove('is-visible');
+  fab.style.display = '';
+
   document.getElementById('endOverlay').style.display='flex';
-  // Reset rematch UI
   document.getElementById('rematchBtn').disabled = false;
   document.getElementById('rematchStatus').textContent = '';
 }
@@ -1631,17 +1693,13 @@ function showEndGame(gs) {
 // ═══════════════════════════════════════════════════════════════════
 // REMATCH
 // ═══════════════════════════════════════════════════════════════════
-// ── MODIFIER ANIMATION TRIGGER ──────────────────────────────────────────────
-// Call this when a zone's modifier becomes visible for the first time.
-// Safe to call multiple times — no-ops if already revealed.
 function triggerModifierAnimation(zoneIdx) {
   if (revealedModifiers.has(zoneIdx) || animatingModifiers.has(zoneIdx)) return;
   animatingModifiers.add(zoneIdx);
-  render(); // paint with animation class
+  render();
   setTimeout(() => {
     animatingModifiers.delete(zoneIdx);
     revealedModifiers.add(zoneIdx);
-    // No re-render needed — class just stays off from now on, next render will omit it
   }, 700);
 }
 
@@ -1655,13 +1713,13 @@ async function checkRematch() {
   const snap = await roomRef.child('rematch').once('value');
   const r = snap.val() || {};
   if (r.host && r.guest) {
-    // Both want rematch — host resets the game state
     await roomRef.child('rematch').remove();
     if (myRole === 'host') {
       await roomRef.child('state').set(buildInitialState());
     }
   }
 }
+
 function showRoundBanner(text, onDone) {
   const banner=document.getElementById('roundBanner');
   const bt=document.getElementById('roundBannerText');
@@ -1672,7 +1730,7 @@ function showRoundBanner(text, onDone) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// RULES PANEL
+// RULES & EFFECTS PANELS
 // ═══════════════════════════════════════════════════════════════════
 let _rulesOpen=false;
 function toggleRules() {
@@ -1689,15 +1747,11 @@ document.addEventListener('mousedown',e=>{
   }
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// EFFECTS PANEL
-// ═══════════════════════════════════════════════════════════════════
 let _efxOpen=false;
 function toggleEfx() {
   _efxOpen=!_efxOpen;
   if (_efxOpen) {
     _rulesOpen=false; document.getElementById('rulesPanel').style.display='none';
-    // Build panel content from MODIFIER_POOL
     const categories = [
       { label: 'NÚMERO', ids: ['EVEN_DOUBLE','ODD_DOUBLE','LUCKY_SEVEN','ACE_DOMINANCE','HIGH_CARD_DBL'] },
       { label: 'PALO',   ids: ['RED_POWER','BLACK_POWER','FLUSH_BOOST'] },
@@ -1724,7 +1778,6 @@ function toggleEfx() {
   }
   document.getElementById('efxPanel').style.display=_efxOpen?'block':'none';
 }
-
 </script>
 </body>
 </html>
